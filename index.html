@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boss</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <style>
+        /* ชุดสีพาสเทลแยกตามชั่วโมงเกิด 00 - 23 (พอร์ตมาจาก Tkinter hour_colors) */
+        .hour-00 { background-color: #FFEBEE; color: #C62828; } .hour-01 { background-color: #FCE4EC; color: #AD1457; }
+        .hour-02 { background-color: #F3E5F5; color: #6A1B9A; } .hour-03 { background-color: #EDE7F6; color: #4527A0; }
+        .hour-04 { background-color: #E8EAF6; color: #283593; } .hour-05 { background-color: #E3F2FD; color: #1565C0; }
+        .hour-06 { background-color: #E0F7FA; color: #00838F; } .hour-07 { background-color: #E0F2F1; color: #00695C; }
+        .hour-08 { background-color: #E8F5E9; color: #2E7D32; } .hour-09 { background-color: #F1F8E9; color: #558B2F; }
+        .hour-10 { background-color: #F9FBE7; color: #9E9D24; } .hour-11 { background-color: #FFFDE7; color: #F57F17; }
+        .hour-12 { background-color: #FFF8E1; color: #FF8F00; } .hour-13 { background-color: #FFF3E0; color: #EF6C00; }
+        .hour-14 { background-color: #FBE9E7; color: #D84315; } .hour-15 { background-color: #EFEBE9; color: #4E342E; }
+        .hour-16 { background-color: #ECEFF1; color: #37474F; } .hour-17 { background-color: #F5F5F5; color: #424242; }
+        .hour-18 { background-color: #E0F2F1; color: #004D40; } .hour-19 { background-color: #E3F2FD; color: #0D47A1; }
+        .hour-20 { background-color: #EDE7F6; color: #311B92; } .hour-21 { background-color: #F3E5F5; color: #4A148C; }
+        .hour-22 { background-color: #FCE4EC; color: #880E4F; } .hour-23 { background-color: #FFEBEE; color: #B71C1C; }
+        .selected-row { background-color: #1565C0 !important; color: white !important; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans p-4">
+
+    <div class="max-w-[1600px] mx-auto">
+        <div class="text-center my-2">
+            <div id="clockLabel" class="text-3xl font-bold text-red-600">เวลาปัจจุบัน: --/--/---- --:--:--</div>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg shadow-md mb-4 border border-gray-200">
+            <h2 class="text-md font-bold text-blue-700 mb-3">🛠️ 1. ตั้งค่าบอสและเวลาเกิดใหม่ (ดับเบิลคลิกแถวในตารางเพื่อดึงมาแก้ไข)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-7 gap-3 items-end">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700">ชื่อบอส:</label>
+                    <input type="text" id="entryName" class="mt-1 block w-full rounded border border-gray-300 p-1.5 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700">เวลาตายล่าสุด:</label>
+                    <input type="text" id="entryLastKill" class="mt-1 block w-full rounded border border-gray-300 p-1.5 text-sm" value="-">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700">โอกาสเกิด (%):</label>
+                    <input type="text" id="entryPercent" class="mt-1 block w-full rounded border border-gray-300 p-1.5 text-sm" value="100">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-gray-700">ระยะเวลาเกิดใหม่:</label>
+                    <div class="flex items-center space-x-1 mt-1">
+                        <input type="number" id="entryHr" class="w-16 rounded border border-gray-300 p-1.5 text-sm" value="12">
+                        <span class="text-xs">ชม.</span>
+                        <input type="number" id="entryMin" class="w-16 rounded border border-gray-300 p-1.5 text-sm" value="0">
+                        <span class="text-xs">นาที</span>
+                    </div>
+                </div>
+                <div>
+                    <button onclick="openPrefixModal()" class="w-full bg-purple-700 hover:bg-purple-800 text-white font-bold p-2 text-xs rounded transition shadow">
+                        🔮 บอสข้ามเซิฟ
+                    </button>
+                </div>
+                <div>
+                    <button onclick="calculateAndSave()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold p-2 text-sm rounded transition shadow">
+                        💾 บันทึก / เพิ่มบอส
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-3 rounded-lg shadow-md mb-4 border border-gray-200 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center space-x-2">
+                <span class="text-sm font-bold text-green-800">🔍 ค้นหาบอส:</span>
+                <input type="text" id="entrySearch" oninput="updateTable()" class="rounded border border-gray-300 p-1.5 text-sm w-48" placeholder="พิมพ์ชื่อเพื่อค้นหา...">
+            </div>
+            <div class="flex items-center space-x-2 flex-wrap gap-2">
+                <button onclick="openKillModal()" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 text-sm rounded shadow">✔️ กดบันทักเวลาบอสตายล่าสุด (บันทึกเวลาปัจจุบัน)</button>
+                <button onclick="deleteBoss()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-3 py-2 text-xs rounded shadow">🗑️ ลบบอสที่เลือก</button>
+                <button onclick="deleteAllSpecialBosses()" class="bg-purple-900 hover:bg-purple-950 text-white font-bold px-3 py-2 text-xs rounded shadow"> ลบบอสข้ามเซิฟ(ลบทั้งหมด)</button>
+                </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="bg-white p-3 rounded-lg shadow border border-gray-200">
+                <h3 class="text-md font-bold text-green-700 mb-2">⏳ บอสกำลังคูลดาวน์รวม (เกิน 5 นาที แยกกลุ่มสีตามรายชั่วโมง)</h3>
+                <div class="overflow-auto max-h-[600px] border border-gray-300">
+                    <table class="min-w-full text-sm text-center border-collapse">
+                        <thead class="bg-gray-100 sticky top-0 border-b border-gray-300 shadow-sm z-10">
+                            <tr>
+                                <th class="p-2 border border-gray-300">ชื่อบอส</th>
+                                <th class="p-2 border border-gray-300">เวลาตายล่าสุด</th>
+                                <th class="p-2 border border-gray-300">เวลาเกิดรอบถัดไป</th>
+                                <th class="p-2 border border-gray-300">โอกาสเกิด</th>
+                                <th class="p-2 border border-gray-300">นับถอยหลัง</th>
+                            </tr>
+                        </thead>
+                        <tbody id="treeLeft"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white p-3 rounded-lg shadow border border-gray-200">
+                <h3 class="text-md font-bold text-red-700 mb-2">🚨 เตรียมตัวล่า! (เกิดแล้ว หรือเหลืออีกไม่เกิน 5 นาที)</h3>
+                <div class="overflow-auto max-h-[600px] border border-gray-300">
+                    <table class="min-w-full text-sm text-center border-collapse">
+                        <thead class="bg-gray-100 sticky top-0 border-b border-gray-300 shadow-sm z-10">
+                            <tr>
+                                <th class="p-2 border border-gray-300">ชื่อบอส</th>
+                                <th class="p-2 border border-gray-300">เวลาตายล่าสุด</th>
+                                <th class="p-2 border border-gray-300">เวลาเกิดรอบถัดไป</th>
+                                <th class="p-2 border border-gray-300">โอกาสเกิด</th>
+                                <th class="p-2 border border-gray-300">นับถอยหลัง</th>
+                            </tr>
+                        </thead>
+                        <tbody id="treeRight"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="prefixModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-5 rounded-lg shadow-lg w-96">
+            <h3 class="text-md font-bold text-purple-800 mb-3">ก๊อปปี้บอสไปช่องพิเศษ</h3>
+            <p class="text-xs text-gray-600 mb-2">พิมพ์ข้อความนำหน้าบอส (เช่น CH2 หรือ L3):</p>
+            <input type="text" id="modalPrefixInput" class="w-full p-2 border border-gray-300 rounded mb-4 text-sm" placeholder="ตัวอย่าง: CH2">
+            <div class="flex justify-end space-x-2">
+                <button onclick="closePrefixModal()" class="px-4 py-2 bg-gray-300 text-xs font-bold rounded">ยกเลิก</button>
+                <button onclick="submitCopyToSpecial()" class="px-4 py-2 bg-purple-700 text-white text-xs font-bold rounded">ตกลง</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="killModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-5 rounded-lg shadow-lg w-96">
+            <h3 class="text-md font-bold text-green-800 mb-2" id="killModalTitle">บันทึกเวลาบอสตาย</h3>
+            <p class="text-xs text-gray-600 mb-2">ระบุเวลาตายรูปแบบ (DD/MM/YYYY HH:MM):</p>
+            <input type="text" id="modalKillInput" class="w-full p-2 border border-gray-300 rounded mb-4 text-sm">
+            <div class="flex justify-end space-x-2">
+                <button onclick="closeKillModal()" class="px-4 py-2 bg-gray-300 text-xs font-bold rounded">ยกเลิก</button>
+                <button onclick="submitBossKilled()" class="px-4 py-2 bg-green-600 text-white text-xs font-bold rounded">ตกลง</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            databaseURL: "https://my-boss-tracker-default-rtdb.asia-southeast1.firebasedatabase.app"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let bossData = {};
+        let selectedBossKey = null;
+
+        function updateClock() {
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            const str = `เวลาปัจจุบัน: ${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+            document.getElementById("clockLabel").innerText = str;
+            setTimeout(updateClock, 1000);
+        }
+        updateClock();
+
+        db.ref('/').on('value', (snapshot) => {
+            bossData = snapshot.val() || {};
+            updateTable();
+        });
+
+        function getCountdownFormat(ms) {
+            if (ms <= 0) return "🔥 เกิดแล้ว!";
+            let total_sec = Math.floor(ms / 1000);
+            let hours = Math.floor(total_sec / 3600);
+            let remainder = total_sec % 3600;
+            let minutes = Math.floor(remainder / 60);
+            let seconds = remainder % 60;
+            return `${String(hours).padStart(2, '0')} ชม. ${String(minutes).padStart(2, '0')} น. ${String(seconds).padStart(2, '0')} วิ`;
+        }
+
+        function encodeFirebaseKey(str) {
+            return str.replace(/[\[\]\.\$\#\/]/g, "_").trim();
+        }
+
+        function updateTable() {
+            const now = new Date();
+            const searchQuery = document.getElementById("entrySearch").value.trim().toLowerCase();
+            
+            const treeLeft = document.getElementById("treeLeft");
+            const treeRight = document.getElementById("treeRight");
+            
+            const scrollLeftTop = treeLeft.parentElement.scrollTop;
+            const scrollRightTop = treeRight.parentElement.scrollTop;
+
+            treeLeft.innerHTML = "";
+            treeRight.innerHTML = "";
+
+            let leftList = [];
+            let rightList = [];
+
+            for (let key in bossData) {
+                let data = bossData[key];
+                if (!data) continue;
+
+                let prefixStr = data.prefix ? `[${data.prefix}] ` : "";
+                let displayName = prefixStr + (data.boss_name || key);
+
+                if (searchQuery && !displayName.toLowerCase().includes(searchQuery)) continue;
+
+                let nsStr = data.next_spawn || "-";
+                let pct = data.percent || "100%";
+
+                if (nsStr === "-") {
+                    rightList.push({ fbKey: key, displayName, data, nsDt: null, pct });
+                    continue;
+                }
+
+                let parts = nsStr.split(" ");
+                if (parts.length < 2) {
+                    rightList.push({ fbKey: key, displayName, data, nsDt: null, pct });
+                    continue;
+                }
+                let dParts = parts[0].split("/");
+                let tParts = parts[1].split(":");
+                let nsDt = new Date(dParts[2], dParts[1]-1, dParts[0], tParts[0], tParts[1]);
+
+                let timeDiffMin = (nsDt - now) / 60000;
+
+                if (timeDiffMin <= 5) {
+                    rightList.push({ fbKey: key, displayName, data, nsDt, pct });
+                } else {
+                    leftList.push({ fbKey: key, displayName, data, nsDt, pct });
+                }
+            }
+
+            leftList.sort((a, b) => a.nsDt - b.nsDt);
+            rightList.sort((a, b) => (a.nsDt || new Date(8640000000000000)) - (b.nsDt || new Date(8640000000000000)));
+
+            leftList.forEach(item => {
+                let diff = item.nsDt - now;
+                let countdown = getCountdownFormat(diff);
+                let hourPad = String(item.nsDt.getHours()).padStart(2, '0');
+                let minPad = String(item.nsDt.getMinutes()).padStart(2, '0');
+                let dayPad = String(item.nsDt.getDate()).padStart(2, '0');
+                let monPad = String(item.nsDt.getMonth()+1).padStart(2, '0');
+                
+                let nextSpawnDisplay = `${dayPad}/${monPad} ${hourPad}:${minPad}`;
+                let hourClass = `hour-${hourPad}`;
+                let isSelected = selectedBossKey === item.fbKey ? 'selected-row' : '';
+
+                treeLeft.innerHTML += `
+                    <tr class="${hourClass} ${isSelected} cursor-pointer hover:opacity-80 border-b border-gray-200 font-medium" 
+                        onclick="selectBoss('${item.fbKey}')" ondblclick="loadToEdit('${item.fbKey}')">
+                        <td class="p-2 border-r border-gray-300 text-left">${item.displayName}</td>
+                        <td class="p-2 border-r border-gray-300">${item.data.last_kill}</td>
+                        <td class="p-2 border-r border-gray-300">${nextSpawnDisplay}</td>
+                        <td class="p-2 border-r border-gray-300">${item.pct}</td>
+                        <td class="p-2">${countdown}</td>
+                    </tr>`;
+            });
+
+            rightList.forEach(item => {
+                let statusText = "";
+                let rowTagClass = "";
+                let nsDisplay = "-";
+
+                if (item.nsDt) {
+                    let hourPad = String(item.nsDt.getHours()).padStart(2, '0');
+                    let minPad = String(item.nsDt.getMinutes()).padStart(2, '0');
+                    let dayPad = String(item.nsDt.getDate()).padStart(2, '0');
+                    let monPad = String(item.nsDt.getMonth()+1).padStart(2, '0');
+                    nsDisplay = `${dayPad}/${monPad} ${hourPad}:${minPad}`;
+
+                    if (now >= item.nsDt) {
+                        let lateMin = Math.floor((now - item.nsDt) / 60000);
+                        statusText = `🔥 เกิดแล้ว! (เลท ${lateMin} น.)`;
+                    } else {
+                        statusText = `⏳ อีก ${getCountdownFormat(item.nsDt - now)}`;
+                    }
+                    rowTagClass = "text-red-600 font-bold bg-red-50";
+                } else {
+                    statusText = "📝 รอข้อมูล";
+                    rowTagClass = "text-gray-400 bg-gray-50";
+                }
+
+                let isSelected = selectedBossKey === item.fbKey ? 'selected-row' : '';
+
+                treeRight.innerHTML += `
+                    <tr class="${rowTagClass} ${isSelected} cursor-pointer hover:opacity-80 border-b border-gray-200" 
+                        onclick="selectBoss('${item.fbKey}')" ondblclick="loadToEdit('${item.fbKey}')">
+                        <td class="p-2 border-r border-gray-300 text-left text-black font-semibold">${item.displayName}</td>
+                        <td class="p-2 border-r border-gray-300 text-black font-normal">${item.data.last_kill}</td>
+                        <td class="p-2 border-r border-gray-300 text-black font-normal">${nsDisplay}</td>
+                        <td class="p-2 border-r border-gray-300 text-black font-normal">${item.pct}</td>
+                        <td class="p-2">${statusText}</td>
+                    </tr>`;
+            });
+
+            treeLeft.parentElement.scrollTop = scrollLeftTop;
+            treeRight.parentElement.scrollTop = scrollRightTop;
+        }
+
+        function selectBoss(fbKey) {
+            selectedBossKey = fbKey;
+            updateTable();
+        }
+
+        function loadToEdit(fbKey) {
+            let data = bossData[fbKey];
+            if (!data) return;
+            
+            let prefixStr = data.prefix ? `[${data.prefix}] ` : "";
+            document.getElementById("entryName").value = prefixStr + (data.boss_name || fbKey);
+            document.getElementById("entryLastKill").value = data.last_kill || "-";
+            document.getElementById("entryHr").value = data.respawn_hr || 12;
+            document.getElementById("entryMin").value = data.respawn_min || 0;
+            document.getElementById("entryPercent").value = (data.percent || "100%").replace("%", "");
+            
+            selectedBossKey = fbKey;
+            updateTable();
+        }
+
+        function calculateAndSave() {
+            let rawName = document.getElementById("entryName").value.trim();
+            let lastKillStr = document.getElementById("entryLastKill").value.trim();
+            let pctStr = document.getElementById("entryPercent").value.trim().replace("%", "");
+
+            if (!rawName) return alert("กรุณากรอกชื่อบอสด้วยครับ");
+
+            let hr = parseInt(document.getElementById("entryHr").value) || 0;
+            let mn = parseInt(document.getElementById("entryMin").value) || 0;
+            if (hr === 0 && mn === 0) return alert("กรุณากรอกระยะเวลาเกิดใหม่ให้ถูกต้อง");
+
+            let nextSpawn = "-";
+            if (lastKillStr && lastKillStr !== "-") {
+                let parts = lastKillStr.split(" ");
+                if (parts.length >= 2) {
+                    let dParts = parts[0].split("/");
+                    let tParts = parts[1].split(":");
+                    let lkDt = new Date(dParts[2], dParts[1]-1, dParts[0], tParts[0], tParts[1]);
+                    
+                    if (!isNaN(lkDt)) {
+                        lkDt.setHours(lkDt.getHours() + hr);
+                        lkDt.setMinutes(lkDt.getMinutes() + mn);
+                        const pad = (n) => String(n).padStart(2, '0');
+                        nextSpawn = `${pad(lkDt.getDate())}/${pad(lkDt.getMonth()+1)}/${lkDt.getFullYear()} ${pad(lkDt.getHours())}:${pad(lkDt.getMinutes())}`;
+                    } else {
+                        return alert("รูปแบบเวลาผิดพลาด! กรุณากรอกในรูปแบบ DD/MM/YYYY HH:MM");
+                    }
+                } else {
+                    return alert("รูปแบบเวลาผิดพลาด! กรุณากรอกในรูปแบบ DD/MM/YYYY HH:MM");
+                }
+            }
+
+            let prefix = "";
+            let bossName = rawName;
+            if (rawName.startsWith("[") && rawName.includes("] ")) {
+                prefix = rawName.split("] ")[0].replace("[", "");
+                bossName = rawName.split("] ")[1];
+            }
+
+            let finalFbKey = encodeFirebaseKey(rawName);
+
+            db.ref(finalFbKey).update({
+                boss_name: bossName,
+                prefix: prefix,
+                last_kill: lastKillStr,
+                respawn_hr: hr,
+                respawn_min: mn,
+                percent: pctStr + "%",
+                next_spawn: nextSpawn,
+                notified: false
+            }).then(() => {
+                document.getElementById("entryName").value = "";
+                document.getElementById("entryLastKill").value = "-";
+                document.getElementById("entryPercent").value = "100";
+                selectedBossKey = null;
+            });
+        }
+
+        function openPrefixModal() {
+            document.getElementById("modalPrefixInput").value = "";
+            document.getElementById("prefixModal").classList.remove("hidden");
+        }
+        function closePrefixModal() {
+            document.getElementById("prefixModal").classList.add("hidden");
+        }
+        function submitCopyToSpecial() {
+            let newPrefix = document.getElementById("modalPrefixInput").value.trim();
+            if (!newPrefix) return alert("กรุณากรอกคำนำหน้าด้วยครับ");
+            
+            let count = 0;
+            let promises = [];
+
+            for (let key in bossData) {
+                let currentItem = bossData[key];
+                if (!currentItem) continue;
+
+                let baseBossName = currentItem.boss_name || key;
+                let fullNewName = `[${newPrefix}] ${baseBossName}`;
+                let secureKey = encodeFirebaseKey(fullNewName);
+
+                let p = db.ref(secureKey).update({
+                    boss_name: baseBossName,
+                    prefix: newPrefix,
+                    last_kill: "-",
+                    respawn_hr: currentItem.respawn_hr || 12,
+                    respawn_min: currentItem.respawn_min || 0,
+                    percent: currentItem.percent || "100%",
+                    next_spawn: "-",
+                    notified: false
+                });
+                
+                promises.push(p);
+                count++;
+            }
+            
+            if (count > 0) {
+                Promise.all(promises).then(() => {
+                    alert(`🔮 ทำสำเนาบอสทั้งหมด ${count} ตัว ไปที่ช่องพิเศษ [${newPrefix}] เรียบร้อยครับ!`);
+                    closePrefixModal();
+                }).catch((err) => {
+                    alert("เกิดข้อผิดพลาด: " + err.message);
+                });
+            } else {
+                alert("❌ ไม่พบข้อมูลบอสในตารางที่จะนำมาคัดลอกครับ");
+            }
+        }
+
+        function openKillModal() {
+            if (!selectedBossKey) return alert("กรุณาคลิกเลือกชื่อบอสในตารางก่อนกดปุ่มครับ");
+            let data = bossData[selectedBossKey];
+            let prefixStr = data.prefix ? `[${data.prefix}] ` : "";
+            let fullDisplay = prefixStr + (data.boss_name || selectedBossKey);
+
+            let now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            let nowStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+            
+            document.getElementById("killModalTitle").innerText = `บันทึกเวลาตาย: ${fullDisplay}`;
+            document.getElementById("modalKillInput").value = nowStr;
+            document.getElementById("killModal").classList.remove("hidden");
+        }
+        function closeKillModal() {
+            document.getElementById("killModal").classList.add("hidden");
+        }
+        function submitBossKilled() {
+            let newKillStr = document.getElementById("modalKillInput").value.trim();
+            if (!newKillStr) return;
+            let data = bossData[selectedBossKey];
+            if (!data) return;
+
+            try {
+                let parts = newKillStr.split(" ");
+                let dParts = parts[0].split("/");
+                let tParts = parts[1].split(":");
+                let lkDt = new Date(dParts[2], dParts[1]-1, dParts[0], tParts[0], tParts[1]);
+
+                if (isNaN(lkDt)) throw new Error();
+
+                let nsDt = new Date(lkDt.getTime());
+                nsDt.setHours(nsDt.getHours() + parseInt(data.respawn_hr || 12));
+                nsDt.setMinutes(nsDt.getMinutes() + parseInt(data.respawn_min || 0));
+
+                const pad = (n) => String(n).padStart(2, '0');
+                let nextSpawnStr = `${pad(nsDt.getDate())}/${pad(nsDt.getMonth()+1)}/${nsDt.getFullYear()} ${pad(nsDt.getHours())}:${pad(nsDt.getMinutes())}`;
+
+                db.ref(selectedBossKey).update({
+                    last_kill: `${pad(lkDt.getDate())}/${pad(lkDt.getMonth()+1)}/${lkDt.getFullYear()} ${pad(lkDt.getHours())}:${pad(lkDt.getMinutes())}`,
+                    next_spawn: nextSpawnStr,
+                    notified: false
+                }).then(() => {
+                    closeKillModal();
+                    selectedBossKey = null;
+                });
+            } catch (e) {
+                alert("รูปแบบเวลาไม่ถูกต้อง กรุณาพิมพ์ในฟอร์แมต DD/MM/YYYY HH:MM");
+            }
+        }
+
+        function deleteBoss() {
+            if (!selectedBossKey) return alert("กรุณาคลิกเลือกชื่อบอสในตารางก่อนครับ");
+            let data = bossData[selectedBossKey];
+            let prefixStr = data.prefix ? `[${data.prefix}] ` : "";
+            let fullDisplay = prefixStr + (data.boss_name || selectedBossKey);
+
+            if (confirm(`ต้องการลบบอส [${fullDisplay}] ?`)) {
+                db.ref(selectedBossKey).remove();
+                selectedBossKey = null;
+            }
+        }
+
+        // นำฟังก์ชันนี้ออกจากการผูกกับปุ่มล้างทั้งหมด เพื่อความปลอดภัย แต่ยังคงโครงสร้างลบเฉพาะบอสข้ามเซิฟไว้ใช้งานได้ปกติครับ
+        function deleteAllSpecialBosses() {
+            let count = 0;
+            for (let key in bossData) {
+                if (bossData[key] && bossData[key].prefix) {
+                    db.ref(key).remove();
+                    count++;
+                }
+            }
+            if (count === 0) alert("ไม่พบข้อมูลบอสพิเศษในระบบให้ลบครับ");
+        }
+
+        // ================= ฟังก์ชันแกนระบบตรวจสอบเวลาลูปคูลดาวน์คู่ขนาน Real-time =================
+        function checkAlarms() {
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+
+            for (let key in bossData) {
+                let data = bossData[key];
+                if (!data) continue;
+                let nsStr = data.next_spawn || "-";
+                if (nsStr === "-") continue;
+
+                let parts = nsStr.split(" ");
+                if (parts.length < 2) continue;
+                let dParts = parts[0].split("/");
+                let tParts = parts[1].split(":");
+                let nsDt = new Date(dParts[2], dParts[1]-1, dParts[0], tParts[0], tParts[1]);
+
+                // 🔮 1. ปรับปรุงลอจิก: ตั้งเวลาให้ส่งเสียงเตือนล่วงหน้า 2 นาทีก่อนบอสเกิดจริง 🔮
+                let notifyAdvanceTime = new Date(nsDt.getTime() - (2 * 60 * 1000)); 
+
+                if (now >= notifyAdvanceTime && !data.notified) {
+                    db.ref(key).update({ notified: true });
+                    
+                    try {
+                        let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                        let playTone = (freq, startDelay, duration) => {
+                            setTimeout(() => {
+                                let osc = audioCtx.createOscillator();
+                                let gainNode = audioCtx.createGain();
+                                osc.type = 'sine';
+                                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                                gainNode.gain.setValueAtTime(0.01, audioCtx.currentTime);
+                                gainNode.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.05);
+                                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                                osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+                                osc.start(); osc.stop(audioCtx.currentTime + duration);
+                            }, startDelay);
+                        };
+                        
+                        // บรรเลงคอร์ดเสียงกระดิ่งดนตรีพาสเทล Major 7th นุ่มหวานใส
+                        playTone(523.25, 0, 0.6);   
+                        playTone(659.25, 120, 0.6); 
+                        playTone(783.99, 240, 0.6); 
+                        playTone(987.77, 360, 0.8); 
+                    } catch (e) { console.log(e); }
+                }
+
+                // 2. ลอจิกล้างขยับรอบออโต้เมื่อบอสปล่อยเลทไปแล้ว 1 นาที 30 วินาที
+                let thresholdDt = new Date(nsDt.getTime() + (1 * 60 * 1000) + (30 * 1000));
+                if (now >= thresholdDt) {
+                    let pctVal = 100;
+                    try { pctVal = parseInt(data.percent.replace("%", "")) || 100; } catch(e){}
+
+                    let newLastKillDt = new Date();
+                    let newSpawnDt = new Date();
+
+                    if (pctVal === 100) {
+                        newLastKillDt = thresholdDt; 
+                        newSpawnDt = new Date(newLastKillDt.getTime());
+                        newSpawnDt.setHours(newSpawnDt.getHours() + parseInt(data.respawn_hr || 12));
+                        newSpawnDt.setMinutes(newSpawnDt.getMinutes() + parseInt(data.respawn_min || 0));
+                    } else {
+                        newLastKillDt = nsDt;
+                        newSpawnDt = new Date(newLastKillDt.getTime());
+                        newSpawnDt.setHours(newSpawnDt.getHours() + parseInt(data.respawn_hr || 12));
+                        newSpawnDt.setMinutes(newSpawnDt.getMinutes() + parseInt(data.respawn_min || 0));
+                    }
+
+                    let lkStr = `${pad(newLastKillDt.getDate())}/${pad(newLastKillDt.getMonth()+1)}/${newLastKillDt.getFullYear()} ${pad(newLastKillDt.getHours())}:${pad(newLastKillDt.getMinutes())}`;
+                    let nsStrNew = `${pad(newSpawnDt.getDate())}/${pad(newSpawnDt.getMonth()+1)}/${newSpawnDt.getFullYear()} ${pad(newSpawnDt.getHours())}:${pad(newSpawnDt.getMinutes())}`;
+
+                    db.ref(key).update({
+                        last_kill: lkStr,
+                        next_spawn: nsStrNew,
+                        notified: false
+                    });
+                }
+            }
+        }
+        
+        setInterval(() => {
+            checkAlarms();
+            updateTable();
+        }, 1000);
+    </script>
+</body>
+</html>
