@@ -21,6 +21,11 @@
         .hour-20 { background-color: #EDE7F6; color: #311B92; } .hour-21 { background-color: #F3E5F5; color: #4A148C; }
         .hour-22 { background-color: #FCE4EC; color: #880E4F; } .hour-23 { background-color: #FFEBEE; color: #B71C1C; }
         .selected-row { background-color: #1565C0 !important; color: white !important; }
+        
+        /* สไตล์สำหรับโซนลากวางสลับฝั่ง ซ้าย-ขวา */
+        .drag-zone { min-height: 120px; transition: all 0.2s ease; width: 100%; }
+        .drag-over { border: 3px dashed #3b82f6 !important; background-color: #eff6ff !important; rounded-radius: 0.5rem; }
+        .drag-handle { cursor: move; }
     </style>
 </head>
 <body class="bg-gray-100 font-sans p-4">
@@ -69,7 +74,19 @@
     <!-- ================= 💻 ส่วนเนื้อหาหลักเมื่อล็อกอินสำเร็จ 💻 ================= -->
     <div id="mainContent" class="max-w-[1600px] mx-auto hidden">
         
-        <!-- 👑 แผงควบคุมแอดมินฉบับแยกปุ่มสิทธิ์ละเอียด + ปุ่มลบบัญชี 👑 -->
+        <div class="text-center my-2 flex justify-between items-center bg-white p-3 rounded-lg shadow mb-4">
+            <div class="text-xs font-bold text-blue-800 bg-blue-50 px-3 py-1.5 rounded border border-blue-200 flex items-center gap-1">
+                <span>ผู้ใช้งาน:</span> <span id="displayCurrentUser">-</span>
+                <span id="displayUserRole" class="text-[10px] px-1.5 py-0.5 rounded ml-1 font-bold"></span>
+            </div>
+            <div id="clockLabel" class="text-3xl font-bold text-red-600">เวลาปัจจุบัน: --/--/---- --:--:--</div>
+            <div class="flex gap-2">
+                <button onclick="resetLayout()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 text-xs rounded shadow">🔄 รีเซ็ตตารางซ้าย-ขวา</button>
+                <button onclick="logout()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold px-3 py-1.5 text-xs rounded shadow">🔒 ออกจากระบบ</button>
+            </div>
+        </div>
+
+        <!-- 👑 แผงควบคุมแอดมิน (ล็อกตำแหน่งคงที่) -->
         <div id="adminPanel" class="bg-purple-50 p-4 rounded-lg shadow border-2 border-purple-300 mb-4 hidden">
             <div class="flex justify-between items-center mb-2">
                 <h3 class="text-sm font-bold text-purple-900">👑 ระบบจัดการสมาชิกและการแก้ไข (สำหรับแอดมิน)</h3>
@@ -98,16 +115,7 @@
             </div>
         </div>
 
-        <div class="text-center my-2 flex justify-between items-center">
-            <div class="text-xs font-bold text-blue-800 bg-blue-50 px-3 py-1.5 rounded border border-blue-200 flex items-center gap-1">
-                <span>ผู้ใช้งาน:</span> <span id="displayCurrentUser">-</span>
-                <span id="displayUserRole" class="text-[10px] px-1.5 py-0.5 rounded ml-1 font-bold"></span>
-            </div>
-            <div id="clockLabel" class="text-3xl font-bold text-red-600">เวลาปัจจุบัน: --/--/---- --:--:--</div>
-            <button onclick="logout()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold px-3 py-1.5 text-xs rounded shadow">🔒 ออกจากระบบ</button>
-        </div>
-
-        <!-- ส่วนที่ 1: ตั้งค่าโปรไฟล์บอส -->
+        <!-- 🛠️ ส่วนที่ 1: ตั้งค่าโปรไฟล์บอส (ล็อกตำแหน่งคงที่) -->
         <div id="bossInputArea" class="bg-white p-4 rounded-lg shadow-md mb-4 border border-gray-200 hidden">
             <h2 class="text-md font-bold text-blue-700 mb-3">🛠️ 1. ตั้งค่าบอสและเวลาเกิดใหม่ (ดับเบิลคลิกแถวในตารางเพื่อดึงมาแก้ไข)</h2>
             <div class="grid grid-cols-1 md:grid-cols-7 gap-3 items-end">
@@ -133,19 +141,15 @@
                     </div>
                 </div>
                 <div>
-                    <button onclick="openPrefixModal()" class="w-full bg-purple-700 hover:bg-purple-800 text-white font-bold p-2 text-xs rounded transition shadow">
-                        🔮 บอสข้ามเซิฟ
-                    </button>
+                    <button onclick="openPrefixModal()" class="w-full bg-purple-700 hover:bg-purple-800 text-white font-bold p-2 text-xs rounded transition shadow">🔮 บอสข้ามเซิฟ</button>
                 </div>
                 <div>
-                    <button onclick="calculateAndSave()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold p-2 text-sm rounded transition shadow">
-                        💾 บันทึก / เพิ่มบอส
-                    </button>
+                    <button onclick="calculateAndSave()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold p-2 text-sm rounded transition shadow">💾 บันทึก / เพิ่มบอส</button>
                 </div>
             </div>
         </div>
 
-        <!-- ส่วนที่ 2: ค้นหาชื่อบอส -->
+        <!-- 🔍 ส่วนที่ 2: ค้นหาชื่อบอส (ล็อกตำแหน่งคงที่) -->
         <div class="bg-white p-3 rounded-lg shadow-md mb-4 border border-gray-200 flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center space-x-2">
                 <span class="text-sm font-bold text-green-800">🔍 ค้นหาบอส:</span>
@@ -156,48 +160,66 @@
                 <button onclick="deleteBoss()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-3 py-2 text-xs rounded shadow">🗑️ ลบบอสที่เลือก</button>
                 <button onclick="deleteAllSpecialBosses()" class="bg-purple-900 hover:bg-purple-950 text-white font-bold px-3 py-2 text-xs rounded shadow"> ลบบอสข้ามเซิฟ(ลบทั้งหมด)</button>
             </div>
-            <div id="viewerAlertText" class="text-xs font-bold text-gray-500 hidden bg-gray-50 px-3 py-2 rounded border border-gray-200">
-                👁️ คุณอยู่ในโหมด "ดูได้อย่างเดียว"
-            </div>
+            <div id="viewerAlertText" class="text-xs font-bold text-gray-500 hidden bg-gray-50 px-3 py-2 rounded border border-gray-200">👁️ คุณอยู่ในโหมด "ดูได้อย่างเดียว"</div>
         </div>
 
-        <!-- ส่วนที่ 3: ตารางแสดงผลบอส -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div class="bg-white p-3 rounded-lg shadow border border-gray-200">
-                <h3 class="text-md font-bold text-green-700 mb-2">⏳ บอสกำลังคูลดาวน์รวม (เกิน 5 นาที แยกกลุ่มสีตามรายชั่วโมง)</h3>
-                <div class="overflow-auto max-h-[600px] border border-gray-300">
-                    <table class="min-w-full text-sm text-center border-collapse">
-                        <thead class="bg-gray-100 sticky top-0 border-b border-gray-300 shadow-sm z-10">
-                            <tr>
-                                <th class="p-2 border border-gray-300">ชื่อบอส</th>
-                                <th class="p-2 border border-gray-300">เวลาตายล่าสุด</th>
-                                <th class="p-2 border border-gray-300">เวลาเกิดรอบถัดไป</th>
-                                <th class="p-2 border border-gray-300">โอกาสเกิด</th>
-                                <th class="p-2 border border-gray-300">นับถอยหลัง</th>
-                            </tr>
-                        </thead>
-                        <tbody id="treeLeft"></tbody>
-                    </table>
+        <!-- ================= 🏗️ ส่วนที่ 3: บอร์ดตารางซ้าย-ขวา แบบลากย้ายสลับฝั่งและยืดขยายเต็มจอออโต้ ================= -->
+        <div id="boardContainer" class="flex flex-col lg:flex-row gap-4 w-full items-start">
+            
+            <!-- โซนรับฝั่งซ้าย (มีเส้นประจางๆ ไว้ให้รองรับการลากกลับได้เสมอเมื่อว่าง) -->
+            <div id="zone-left" class="drag-zone flex flex-col gap-4 p-1 border-2 border-transparent border-dashed hover:border-gray-300 rounded-lg lg:flex-1">
+                
+                <!-- ตารางเตรียมตัวล่า -->
+                <div id="card-alert" draggable="true" class="w-full bg-white p-3 rounded-lg shadow border border-gray-200">
+                    <div class="drag-handle flex justify-between items-center border-b pb-2 mb-2 bg-red-50 p-1 rounded">
+                        <h3 class="text-md font-bold text-red-700">🚨 เตรียมตัวล่า! (เกิดแล้ว หรือเหลืออีกไม่เกิน 5 นาที)</h3>
+                        <span class="text-[11px] bg-red-200 text-red-800 px-2 py-0.5 rounded select-none font-semibold">☰ MOVE</span>
+                    </div>
+                    <div class="overflow-auto max-h-[600px] border border-gray-300">
+                        <table class="min-w-full text-sm text-center border-collapse">
+                            <thead class="bg-gray-100 sticky top-0 border-b border-gray-300 shadow-sm z-10">
+                                <tr>
+                                    <th class="p-2 border border-gray-300">ชื่อบอส</th>
+                                    <th class="p-2 border border-gray-300">เวลาตายล่าสุด</th>
+                                    <th class="p-2 border border-gray-300">เวลาเกิดรอบถัดไป</th>
+                                    <th class="p-2 border border-gray-300">โอกาสเกิด</th>
+                                    <th class="p-2 border border-gray-300">นับถอยหลัง</th>
+                                </tr>
+                            </thead>
+                            <tbody id="treeLeft"></tbody>
+                        </table>
+                    </div>
                 </div>
+
             </div>
 
-            <div class="bg-white p-3 rounded-lg shadow border border-gray-200">
-                <h3 class="text-md font-bold text-red-700 mb-2">🚨 เตรียมตัวล่า! (เกิดแล้ว หรือเหลืออีกไม่เกิน 5 นาที)</h3>
-                <div class="overflow-auto max-h-[600px] border border-gray-300">
-                    <table class="min-w-full text-sm text-center border-collapse">
-                        <thead class="bg-gray-100 sticky top-0 border-b border-gray-300 shadow-sm z-10">
-                            <tr>
-                                <th class="p-2 border border-gray-300">ชื่อบอส</th>
-                                <th class="p-2 border border-gray-300">เวลาตายล่าสุด</th>
-                                <th class="p-2 border border-gray-300">เวลาเกิดรอบถัดไป</th>
-                                <th class="p-2 border border-gray-300">โอกาสเกิด</th>
-                                <th class="p-2 border border-gray-300">นับถอยหลัง</th>
-                            </tr>
-                        </thead>
-                        <tbody id="treeRight"></tbody>
-                    </table>
+            <!-- โซนรับฝั่งขวา (มีเส้นประจางๆ ไว้ให้รองรับการลากกลับได้เสมอเมื่อว่าง) -->
+            <div id="zone-right" class="drag-zone flex flex-col gap-4 p-1 border-2 border-transparent border-dashed hover:border-gray-300 rounded-lg lg:flex-1">
+                
+                <!-- ตารางคูลดาวน์รวม -->
+                <div id="card-cooldown" draggable="true" class="w-full bg-white p-3 rounded-lg shadow border border-gray-200">
+                    <div class="drag-handle flex justify-between items-center border-b pb-2 mb-2 bg-green-50 p-1 rounded">
+                        <h3 class="text-md font-bold text-green-700">⏳ บอสกำลังคูลดาวน์รวม (เกิน 5 นาที แยกกลุ่มสีตามรายชั่วโมง)</h3>
+                        <span class="text-[11px] bg-green-200 text-green-800 px-2 py-0.5 rounded select-none font-semibold">☰ MOVE</span>
+                    </div>
+                    <div class="overflow-auto max-h-[600px] border border-gray-300">
+                        <table class="min-w-full text-sm text-center border-collapse">
+                            <thead class="bg-gray-100 sticky top-0 border-b border-gray-300 shadow-sm z-10">
+                                <tr>
+                                    <th class="p-2 border border-gray-300">ชื่อบอส</th>
+                                    <th class="p-2 border border-gray-300">เวลาตายล่าสุด</th>
+                                    <th class="p-2 border border-gray-300">เวลาเกิดรอบถัดไป</th>
+                                    <th class="p-2 border border-gray-300">โอกาสเกิด</th>
+                                    <th class="p-2 border border-gray-300">นับถอยหลัง</th>
+                                </tr>
+                            </thead>
+                            <tbody id="treeRight"></tbody>
+                        </table>
+                    </div>
                 </div>
+
             </div>
+
         </div>
     </div>
 
@@ -240,6 +262,9 @@
         let adminSelectedUser = null;
         let currentUserRole = "viewer"; 
         let showUserList = false;
+
+        function openPrefixModal() { document.getElementById("prefixModal").classList.remove("hidden"); }
+        function closePrefixModal() { document.getElementById("prefixModal").classList.add("hidden"); }
 
         function toggleAuthMode(mode) {
             document.getElementById("authErrorMsg").classList.add("hidden");
@@ -433,6 +458,8 @@
                 }
                 updateTable();
             });
+
+            loadUserLayout();
         }
 
         function toggleUserListDisplay() {
@@ -553,13 +580,14 @@
         function updateTable() {
             const now = new Date();
             const searchQuery = document.getElementById("entrySearch").value.trim().toLowerCase();
-            const treeLeft = document.getElementById("treeLeft");
-            const treeRight = document.getElementById("treeRight");
+            const treeLeft = document.getElementById("treeLeft"); 
+            const treeRight = document.getElementById("treeRight"); 
             const scrollLeftTop = treeLeft.parentElement.scrollTop;
             const scrollRightTop = treeRight.parentElement.scrollTop;
 
             treeLeft.innerHTML = ""; treeRight.innerHTML = "";
-            let leftList = []; let rightList = [];
+            let leftList = []; 
+            let rightList = []; 
 
             for (let key in bossData) {
                 let data = bossData[key]; if (!data) continue;
@@ -568,28 +596,21 @@
                 if (searchQuery && !displayName.toLowerCase().includes(searchQuery)) continue;
                 let nsStr = data.next_spawn || "-"; let pct = data.percent || "100%";
 
-                if (nsStr === "-") { rightList.push({ fbKey: key, displayName, data, nsDt: null, pct }); continue; }
-                let parts = nsStr.split(" "); if (parts.length < 2) { rightList.push({ fbKey: key, displayName, data, nsDt: null, pct }); continue; }
+                if (nsStr === "-") { leftList.push({ fbKey: key, displayName, data, nsDt: null, pct }); continue; }
+                let parts = nsStr.split(" "); if (parts.length < 2) { leftList.push({ fbKey: key, displayName, data, nsDt: null, pct }); continue; }
                 let dParts = parts[0].split("/"); let tParts = parts[1].split(":");
                 let nsDt = new Date(dParts[2], dParts[1]-1, dParts[0], tParts[0], tParts[1]);
-                if ((nsDt - now) / 60000 <= 5) { rightList.push({ fbKey: key, displayName, data, nsDt, pct }); } 
-                else { leftList.push({ fbKey: key, displayName, data, nsDt, pct }); }
+                
+                if ((nsDt - now) / 60000 <= 5) { leftList.push({ fbKey: key, displayName, data, nsDt, pct }); } 
+                else { rightList.push({ fbKey: key, displayName, data, nsDt, pct }); }
             }
 
-            leftList.sort((a, b) => a.nsDt - b.nsDt);
-            rightList.sort((a, b) => (a.nsDt || new Date(8640000000000000)) - (b.nsDt || new Date(8640000000000000)));
+            leftList.sort((a, b) => (a.nsDt || new Date(8640000000000000)) - (b.nsDt || new Date(8640000000000000)));
+            rightList.sort((a, b) => a.nsDt - b.nsDt);
 
             let rowActionAttr = (itemKey) => (currentUserRole === "admin" || currentUserRole === "editor") ? `onclick="selectBoss('${itemKey}')" ondblclick="loadToEdit('${itemKey}')"` : `onclick="selectBoss('${itemKey}')"`;
 
             leftList.forEach(item => {
-                let countdown = getCountdownFormat(item.nsDt - now);
-                let hourPad = String(item.nsDt.getHours()).padStart(2, '0');
-                let nextSpawnDisplay = `${String(item.nsDt.getDate()).padStart(2, '0')}/${String(item.nsDt.getMonth()+1).padStart(2, '0')} ${hourPad}:${String(item.nsDt.getMinutes()).padStart(2, '0')}`;
-                let isSelected = selectedBossKey === item.fbKey ? 'selected-row' : '';
-                treeLeft.innerHTML += `<tr class="hour-${hourPad} ${isSelected} cursor-pointer hover:opacity-80 border-b border-gray-200 font-medium" ${rowActionAttr(item.fbKey)}><td class="p-2 border-r border-gray-300 text-left">${item.displayName}</td><td class="p-2 border-r border-gray-300">${item.data.last_kill}</td><td class="p-2 border-r border-gray-300">${nextSpawnDisplay}</td><td class="p-2 border-r border-gray-300">${item.pct}</td><td class="p-2">${countdown}</td></tr>`;
-            });
-
-            rightList.forEach(item => {
                 let statusText = "", rowTagClass = "", nsDisplay = "-";
                 if (item.nsDt) {
                     nsDisplay = `${String(item.nsDt.getDate()).padStart(2, '0')}/${String(item.nsDt.getMonth()+1).padStart(2, '0')} ${String(item.nsDt.getHours()).padStart(2, '0')}:${String(item.nsDt.getMinutes()).padStart(2, '0')}`;
@@ -597,8 +618,17 @@
                     rowTagClass = "text-red-600 font-bold bg-red-50";
                 } else { statusText = "📝 รอข้อมูล"; rowTagClass = "text-gray-400 bg-gray-50"; }
                 let isSelected = selectedBossKey === item.fbKey ? 'selected-row' : '';
-                treeRight.innerHTML += `<tr class="${rowTagClass} ${isSelected} cursor-pointer hover:opacity-80 border-b border-gray-200" ${rowActionAttr(item.fbKey)}><td class="p-2 border-r border-gray-300 text-left text-black font-semibold">${item.displayName}</td><td class="p-2 border-r border-gray-300 text-black font-normal">${item.data.last_kill}</td><td class="p-2 border-r border-gray-300 text-black font-normal">${nsDisplay}</td><td class="p-2 border-r border-gray-300 text-black font-normal">${item.pct}</td><td class="p-2">${statusText}</td></tr>`;
+                treeLeft.innerHTML += `<tr class="${rowTagClass} ${isSelected} cursor-pointer hover:opacity-80 border-b border-gray-200" ${rowActionAttr(item.fbKey)}><td class="p-2 border-r border-gray-300 text-left text-black font-semibold">${item.displayName}</td><td class="p-2 border-r border-gray-300 text-black font-normal">${item.data.last_kill}</td><td class="p-2 border-r border-gray-300 text-black font-normal">${nsDisplay}</td><td class="p-2 border-r border-gray-300 text-black font-normal">${item.pct}</td><td class="p-2">${statusText}</td></tr>`;
             });
+
+            rightList.forEach(item => {
+                let countdown = getCountdownFormat(item.nsDt - now);
+                let hourPad = String(item.nsDt.getHours()).padStart(2, '0');
+                let nextSpawnDisplay = `${String(item.nsDt.getDate()).padStart(2, '0')}/${String(item.nsDt.getMonth()+1).padStart(2, '0')} ${hourPad}:${String(item.nsDt.getMinutes()).padStart(2, '0')}`;
+                let isSelected = selectedBossKey === item.fbKey ? 'selected-row' : '';
+                treeRight.innerHTML += `<tr class="hour-${hourPad} ${isSelected} cursor-pointer hover:opacity-80 border-b border-gray-200 font-medium" ${rowActionAttr(item.fbKey)}><td class="p-2 border-r border-gray-300 text-left">${item.displayName}</td><td class="p-2 border-r border-gray-300">${item.data.last_kill}</td><td class="p-2 border-r border-gray-300">${nextSpawnDisplay}</td><td class="p-2 border-r border-gray-300">${item.pct}</td><td class="p-2">${countdown}</td></tr>`;
+            });
+            
             treeLeft.parentElement.scrollTop = scrollLeftTop; treeRight.parentElement.scrollTop = scrollRightTop;
         }
 
@@ -746,15 +776,12 @@
             }
         }
 
-        // ฟังก์ชันสำหรับดึงเวลาปัจจุบันมาอัปเดตลงบอร์ดแบบ Real-time
         function updateClock() {
             const now = new Date();
             const pad = (n) => String(n).padStart(2, '0');
-            
             const day = pad(now.getDate());
             const month = pad(now.getMonth() + 1);
             const year = now.getFullYear();
-            
             const hours = pad(now.getHours());
             const minutes = pad(now.getMinutes());
             const seconds = pad(now.getSeconds());
@@ -765,10 +792,108 @@
             }
         }
 
-        // เรียกใช้นาฬิกาทันทีเมื่อเข้าเว็บ
+        // ================= 🏗️ ฟังก์ชันระบบ Drag and Drop แบบกล่องสลับฝั่ง ซ้าย-ขวา =================
+        const cards = document.querySelectorAll('[draggable="true"]');
+        const zones = document.querySelectorAll('.drag-zone');
+
+        cards.forEach(card => {
+            card.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', card.id);
+                card.style.opacity = '0.4';
+            });
+            card.addEventListener('dragend', () => {
+                card.style.opacity = '1';
+                zones.forEach(z => z.classList.remove('drag-over'));
+                saveUserLayout(); 
+                adjustFlexWidths(); 
+            });
+        });
+
+        zones.forEach(zone => {
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.classList.add('drag-over');
+            });
+            zone.addEventListener('dragleave', () => {
+                zone.classList.remove('drag-over');
+            });
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const cardId = e.dataTransfer.getData('text/plain');
+                const card = document.getElementById(cardId);
+                if (card) {
+                    zone.appendChild(card);
+                }
+            });
+        });
+
+        function adjustFlexWidths() {
+            const zoneLeft = document.getElementById('zone-left');
+            const zoneRight = document.getElementById('zone-right');
+            const container = document.getElementById('boardContainer');
+
+            const leftChildCount = zoneLeft.children.length;
+            const rightChildCount = zoneRight.children.length;
+
+            if (leftChildCount === 0 || rightChildCount === 0) {
+                container.classList.remove('lg:flex-row');
+                container.classList.add('flex-col');
+                
+                if (leftChildCount === 0) zoneLeft.className = "drag-zone border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 w-full";
+                if (rightChildCount === 0) zoneRight.className = "drag-zone border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 w-full";
+            } else {
+                container.classList.remove('flex-col');
+                container.classList.add('lg:flex-row');
+                
+                zoneLeft.className = "drag-zone flex flex-col gap-4 p-1 border-2 border-transparent rounded-lg lg:flex-1";
+                zoneRight.className = "drag-zone flex flex-col gap-4 p-1 border-2 border-transparent rounded-lg lg:flex-1";
+            }
+        }
+
+        function saveUserLayout() {
+            const user = localStorage.getItem("currentBossUser") || "guest";
+            const leftCards = Array.from(document.getElementById('zone-left').children).filter(c => c.id).map(c => c.id);
+            const rightCards = Array.from(document.getElementById('zone-right').children).filter(c => c.id).map(c => c.id);
+            
+            const layoutData = { left: leftCards, right: rightCards };
+            localStorage.setItem(`table_layout_${user}`, JSON.stringify(layoutData));
+        }
+
+        function loadUserLayout() {
+            const user = localStorage.getItem("currentBossUser") || "guest";
+            const savedLayout = localStorage.getItem(`table_layout_${user}`);
+            if (!savedLayout) {
+                adjustFlexWidths();
+                return;
+            }
+
+            const layoutData = JSON.parse(savedLayout);
+            const zoneLeft = document.getElementById('zone-left');
+            const zoneRight = document.getElementById('zone-right');
+
+            if(layoutData.left) {
+                layoutData.left.forEach(id => {
+                    const card = document.getElementById(id);
+                    if(card) zoneLeft.appendChild(card);
+                });
+            }
+            if(layoutData.right) {
+                layoutData.right.forEach(id => {
+                    const card = document.getElementById(id);
+                    if(card) zoneRight.appendChild(card);
+                });
+            }
+            adjustFlexWidths();
+        }
+
+        function resetLayout() {
+            const user = localStorage.getItem("currentBossUser") || "guest";
+            localStorage.removeItem(`table_layout_${user}`);
+            window.location.reload();
+        }
+
         updateClock();
 
-        // รันลูปเช็คระบบการแจ้งเตือนบอส ตารางเวลา และเวลาปัจจุบันไปพร้อมกันทุกๆ 1 วินาที
         setInterval(() => { 
             checkAlarms(); 
             updateTable(); 
