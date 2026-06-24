@@ -8,18 +8,32 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <style>
-        .hour-00 { background-color: #FFEBEE; color: #C62828; } .hour-01 { background-color: #FCE4EC; color: #AD1457; }
-        .hour-02 { background-color: #F3E5F5; color: #6A1B9A; } .hour-03 { background-color: #EDE7F6; color: #4527A0; }
-        .hour-04 { background-color: #E8EAF6; color: #283593; } .hour-05 { background-color: #E3F2FD; color: #1565C0; }
-        .hour-06 { background-color: #E0F7FA; color: #00838F; } .hour-07 { background-color: #E0F2F1; color: #00695C; }
-        .hour-08 { background-color: #E8F5E9; color: #2E7D32; } .hour-09 { background-color: #F1F8E9; color: #558B2F; }
-        .hour-10 { background-color: #F9FBE7; color: #9E9D24; } .hour-11 { background-color: #FFFDE7; color: #F57F17; }
-        .hour-12 { background-color: #FFF8E1; color: #FF8F00; } .hour-13 { background-color: #FFF3E0; color: #EF6C00; }
-        .hour-14 { background-color: #FBE9E7; color: #D84315; } .hour-15 { background-color: #EFEBE9; color: #4E342E; }
-        .hour-16 { background-color: #ECEFF1; color: #37474F; } .hour-17 { background-color: #F5F5F5; color: #424242; }
-        .hour-18 { background-color: #E0F2F1; color: #004D40; } .hour-19 { background-color: #E3F2FD; color: #0D47A1; }
-        .hour-20 { background-color: #EDE7F6; color: #311B92; } .hour-21 { background-color: #F3E5F5; color: #4A148C; }
-        .hour-22 { background-color: #FCE4EC; color: #880E4F; } .hour-23 { background-color: #FFEBEE; color: #B71C1C; }
+        /* ปรับปรุงพื้นหลังให้สลับเฉดสีไม่ซ้ำกัน และบังคับให้ตัวหนังสือในตารางเป็นสีดำเข้มทั้งหมด (!important) */
+        .hour-00 { background-color: #FFEBEE !important; color: #000000 !important; } 
+        .hour-01 { background-color: #E0F2F1 !important; color: #000000 !important; } 
+        .hour-02 { background-color: #F3E5F5 !important; color: #000000 !important; } 
+        .hour-03 { background-color: #FFF9C4 !important; color: #000000 !important; } 
+        .hour-04 { background-color: #E8EAF6 !important; color: #000000 !important; } 
+        .hour-05 { background-color: #EFEBE9 !important; color: #000000 !important; } 
+        .hour-06 { background-color: #E1F5FE !important; color: #000000 !important; } 
+        .hour-07 { background-color: #F9FBE7 !important; color: #000000 !important; } 
+        .hour-08 { background-color: #FCE4EC !important; color: #000000 !important; } 
+        .hour-09 { background-color: #E8F5E9 !important; color: #000000 !important; } 
+        .hour-10 { background-color: #FFF3E0 !important; color: #000000 !important; } 
+        .hour-11 { background-color: #E0F7FA !important; color: #000000 !important; } 
+        .hour-12 { background-color: #FFCDD2 !important; color: #000000 !important; } 
+        .hour-13 { background-color: #E1BEE7 !important; color: #000000 !important; } 
+        .hour-14 { background-color: #C5CAE9 !important; color: #000000 !important; } 
+        .hour-15 { background-color: #FFE082 !important; color: #000000 !important; } 
+        .hour-16 { background-color: #B2DFDB !important; color: #000000 !important; } 
+        .hour-17 { background-color: #F8BBD0 !important; color: #000000 !important; } 
+        .hour-18 { background-color: #B3E5FC !important; color: #000000 !important; } 
+        .hour-19 { background-color: #DCEDC8 !important; color: #000000 !important; } 
+        .hour-20 { background-color: #FFF9C4 !important; color: #000000 !important; } 
+        .hour-21 { background-color: #D1C4E9 !important; color: #000000 !important; } 
+        .hour-22 { background-color: #FFCCBC !important; color: #000000 !important; } 
+        .hour-23 { background-color: #CFD8DC !important; color: #000000 !important; } 
+        
         .selected-row { background-color: #1565C0 !important; color: white !important; }
         
         /* สไตล์สำหรับโซนลากวางสลับฝั่ง ซ้าย-ขวา */
@@ -55,7 +69,7 @@
                 <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded text-sm transition shadow">เข้าสู่ระบบ</button>
                 <div class="flex justify-between text-xs px-1">
                     <span onclick="toggleAuthMode('forgot')" class="text-red-500 cursor-pointer underline">ลืมรหัสผ่าน?</span>
-                    <span onclick="toggleAuthMode('register')" class="text-blue-600 cursor-pointer underline">กดสมัครสมาชิกที่นี่</span>
+                    <span onclick="toggleAuthMode('register')" class="text-blue-600 pointer-events-auto cursor-pointer underline">กดสมัครสมาชิกที่นี่</span>
                 </div>
             </div>
             <div id="registerActionZone" class="space-y-2 hidden">
@@ -86,7 +100,7 @@
             </div>
         </div>
 
-        <!-- 👑 แผงควบคุมแอดมิน (ล็อกตำแหน่งคงที่) -->
+        <!-- 👑 แผงควบคุมแอดมิน -->
         <div id="adminPanel" class="bg-purple-50 p-4 rounded-lg shadow border-2 border-purple-300 mb-4 hidden">
             <div class="flex justify-between items-center mb-2">
                 <h3 class="text-sm font-bold text-purple-900">👑 ระบบจัดการสมาชิกและการแก้ไข (สำหรับแอดมิน)</h3>
@@ -115,7 +129,7 @@
             </div>
         </div>
 
-        <!-- 🛠️ ส่วนที่ 1: ตั้งค่าโปรไฟล์บอส (ล็อกตำแหน่งคงที่) -->
+        <!-- 🛠️ ส่วนที่ 1: ตั้งค่าโปรไฟล์บอส -->
         <div id="bossInputArea" class="bg-white p-4 rounded-lg shadow-md mb-4 border border-gray-200 hidden">
             <h2 class="text-md font-bold text-blue-700 mb-3">🛠️ 1. ตั้งค่าบอสและเวลาเกิดใหม่ (ดับเบิลคลิกแถวในตารางเพื่อดึงมาแก้ไข)</h2>
             <div class="grid grid-cols-1 md:grid-cols-7 gap-3 items-end">
@@ -149,12 +163,56 @@
             </div>
         </div>
 
-        <!-- 🔍 ส่วนที่ 2: ค้นหาชื่อบอส (ล็อกตำแหน่งคงที่) -->
-        <div class="bg-white p-3 rounded-lg shadow-md mb-4 border border-gray-200 flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center space-x-2">
+        <!-- 🔍 ส่วนที่ 2: ค้นหาชื่อบอส และ 🔊 แผงตั้งค่าระบบเสียงแจ้งเตือนชุดใหม่ -->
+        <div class="bg-white p-3 rounded-lg shadow-md mb-4 border border-gray-200 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <!-- ค้นหา -->
+            <div class="flex items-center space-x-2 shrink-0">
                 <span class="text-sm font-bold text-green-800">🔍 ค้นหาบอส:</span>
-                <input type="text" id="entrySearch" oninput="updateTable()" class="rounded border border-gray-300 p-1.5 text-sm w-48" placeholder="พิมพ์ชื่อเพื่อค้นหา...">
+                <input type="text" id="entrySearch" oninput="updateTable()" class="rounded border border-gray-300 p-1.5 text-sm w-44" placeholder="พิมพ์ชื่อเพื่อค้นหา...">
             </div>
+
+            <!-- ระบบตั้งค่าเสียงและการเตือนล่วงหน้า -->
+            <div class="flex flex-wrap items-center gap-4 bg-slate-50 p-2 rounded-md border border-slate-200 text-xs font-bold text-slate-700">
+                <div class="flex items-center space-x-1">
+                    <span>⏱️ เตือนก่อนบอสเกิด:</span>
+                    <select id="cfgNotifyAdvance" class="p-1 border border-gray-300 rounded text-xs bg-white">
+                        <option value="1">1</option>
+                        <option value="2" selected>2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                    </select>
+                    <span>นาที</span>
+                </div>
+
+                <div class="flex items-center space-x-1">
+                    <span>🔄 จำนวนเตือนเสียง:</span>
+                    <select id="cfgNotifyLoop" class="p-1 border border-gray-300 rounded text-xs bg-white">
+                        <option value="1">1 ครั้ง</option>
+                        <option value="2" selected>2 ครั้ง (ดับเบิ้ล)</option>
+                        <option value="3">3 ครั้ง</option>
+                        <option value="4">4 ครั้ง</option>
+                        <option value="5">5 ครั้ง</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <span>🔈 เสียงเบา-ดัง:</span>
+                    <input type="range" id="cfgVolume" min="0" max="100" value="50" class="w-20 accent-blue-600 h-1.5 bg-gray-200 rounded-lg cursor-pointer">
+                    <span id="volLabel" class="w-7 inline-block text-slate-500">50%</span>
+                </div>
+
+                <button onclick="triggerChime(true)" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded shadow text-xs transition">
+                    🔊 ทดสอบเสียง
+                </button>
+            </div>
+
+            <!-- โหมดแอดมิน / ดูอย่างเดียว -->
             <div id="bossActionButtons" class="flex items-center space-x-2 flex-wrap gap-2 hidden">
                 <button onclick="openKillModal()" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 text-sm rounded shadow">✔️ กดบันทักเวลาบอสตายล่าสุด (บันทึกเวลาปัจจุบัน)</button>
                 <button onclick="deleteBoss()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-3 py-2 text-xs rounded shadow">🗑️ ลบบอสที่เลือก</button>
@@ -163,10 +221,10 @@
             <div id="viewerAlertText" class="text-xs font-bold text-gray-500 hidden bg-gray-50 px-3 py-2 rounded border border-gray-200">👁️ คุณอยู่ในโหมด "ดูได้อย่างเดียว"</div>
         </div>
 
-        <!-- ================= 🏗️ ส่วนที่ 3: บอร์ดตารางซ้าย-ขวา แบบลากย้ายสลับฝั่งและยืดขยายเต็มจอออโต้ ================= -->
+        <!-- ================= 🏗️ ส่วนที่ 3: บอร์ดตารางซ้าย-ขวา ================= -->
         <div id="boardContainer" class="flex flex-col lg:flex-row gap-4 w-full items-start">
             
-            <!-- โซนรับฝั่งซ้าย (มีเส้นประจางๆ ไว้ให้รองรับการลากกลับได้เสมอเมื่อว่าง) -->
+            <!-- โซนรับฝั่งซ้าย -->
             <div id="zone-left" class="drag-zone flex flex-col gap-4 p-1 border-2 border-transparent border-dashed hover:border-gray-300 rounded-lg lg:flex-1">
                 
                 <!-- ตารางเตรียมตัวล่า -->
@@ -177,7 +235,7 @@
                     </div>
                     <div class="overflow-auto max-h-[600px] border border-gray-300">
                         <table class="min-w-full text-sm text-center border-collapse">
-                            <thead class="bg-gray-100 sticky top-0 border-b border-gray-300 shadow-sm z-10">
+                            <thead class="bg-gray-100 sticky top-0 border-b border-gray-300 shadow-sm z-10 font-bold text-black">
                                 <tr>
                                     <th class="p-2 border border-gray-300">ชื่อบอส</th>
                                     <th class="p-2 border border-gray-300">เวลาตายล่าสุด</th>
@@ -193,7 +251,7 @@
 
             </div>
 
-            <!-- โซนรับฝั่งขวา (มีเส้นประจางๆ ไว้ให้รองรับการลากกลับได้เสมอเมื่อว่าง) -->
+            <!-- โซนรับฝั่งขวา -->
             <div id="zone-right" class="drag-zone flex flex-col gap-4 p-1 border-2 border-transparent border-dashed hover:border-gray-300 rounded-lg lg:flex-1">
                 
                 <!-- ตารางคูลดาวน์รวม -->
@@ -204,7 +262,7 @@
                     </div>
                     <div class="overflow-auto max-h-[600px] border border-gray-300">
                         <table class="min-w-full text-sm text-center border-collapse">
-                            <thead class="bg-gray-100 sticky top-0 border-b border-gray-300 shadow-sm z-10">
+                            <thead class="bg-gray-100 sticky top-0 border-b border-gray-300 shadow-sm z-10 font-bold text-black">
                                 <tr>
                                     <th class="p-2 border border-gray-300">ชื่อบอส</th>
                                     <th class="p-2 border border-gray-300">เวลาตายล่าสุด</th>
@@ -262,6 +320,15 @@
         let adminSelectedUser = null;
         let currentUserRole = "viewer"; 
         let showUserList = false;
+
+        // จัดการ UI แถบเลื่อนปรับความดังเสียง
+        const volumeSlider = document.getElementById("cfgVolume");
+        const volumeLabel = document.getElementById("volLabel");
+        if(volumeSlider && volumeLabel) {
+            volumeSlider.addEventListener("input", (e) => {
+                volumeLabel.innerText = e.target.value + "%";
+            });
+        }
 
         function openPrefixModal() { document.getElementById("prefixModal").classList.remove("hidden"); }
         function closePrefixModal() { document.getElementById("prefixModal").classList.add("hidden"); }
@@ -615,10 +682,10 @@
                 if (item.nsDt) {
                     nsDisplay = `${String(item.nsDt.getDate()).padStart(2, '0')}/${String(item.nsDt.getMonth()+1).padStart(2, '0')} ${String(item.nsDt.getHours()).padStart(2, '0')}:${String(item.nsDt.getMinutes()).padStart(2, '0')}`;
                     statusText = now >= item.nsDt ? `🔥 เกิดแล้ว! (เลท ${Math.floor((now - item.nsDt) / 60000)} น.)` : `⏳ อีก ${getCountdownFormat(item.nsDt - now)}`;
-                    rowTagClass = "text-red-600 font-bold bg-red-50";
-                } else { statusText = "📝 รอข้อมูล"; rowTagClass = "text-gray-400 bg-gray-50"; }
+                    rowTagClass = "text-black font-bold bg-red-100"; 
+                } else { statusText = "📝 รอข้อมูล"; rowTagClass = "text-black font-bold bg-gray-100"; }
                 let isSelected = selectedBossKey === item.fbKey ? 'selected-row' : '';
-                treeLeft.innerHTML += `<tr class="${rowTagClass} ${isSelected} cursor-pointer hover:opacity-80 border-b border-gray-200" ${rowActionAttr(item.fbKey)}><td class="p-2 border-r border-gray-300 text-left text-black font-semibold">${item.displayName}</td><td class="p-2 border-r border-gray-300 text-black font-normal">${item.data.last_kill}</td><td class="p-2 border-r border-gray-300 text-black font-normal">${nsDisplay}</td><td class="p-2 border-r border-gray-300 text-black font-normal">${item.pct}</td><td class="p-2">${statusText}</td></tr>`;
+                treeLeft.innerHTML += `<tr class="${rowTagClass} ${isSelected} cursor-pointer hover:opacity-80 border-b border-gray-300 font-bold" ${rowActionAttr(item.fbKey)}><td class="p-2 border-r border-gray-300 text-left font-bold">${item.displayName}</td><td class="p-2 border-r border-gray-300 font-bold">${item.data.last_kill}</td><td class="p-2 border-r border-gray-300 font-bold">${nsDisplay}</td><td class="p-2 border-r border-gray-300 font-bold">${item.pct}</td><td class="p-2 font-bold">${statusText}</td></tr>`;
             });
 
             rightList.forEach(item => {
@@ -626,7 +693,7 @@
                 let hourPad = String(item.nsDt.getHours()).padStart(2, '0');
                 let nextSpawnDisplay = `${String(item.nsDt.getDate()).padStart(2, '0')}/${String(item.nsDt.getMonth()+1).padStart(2, '0')} ${hourPad}:${String(item.nsDt.getMinutes()).padStart(2, '0')}`;
                 let isSelected = selectedBossKey === item.fbKey ? 'selected-row' : '';
-                treeRight.innerHTML += `<tr class="hour-${hourPad} ${isSelected} cursor-pointer hover:opacity-80 border-b border-gray-200 font-medium" ${rowActionAttr(item.fbKey)}><td class="p-2 border-r border-gray-300 text-left">${item.displayName}</td><td class="p-2 border-r border-gray-300">${item.data.last_kill}</td><td class="p-2 border-r border-gray-300">${nextSpawnDisplay}</td><td class="p-2 border-r border-gray-300">${item.pct}</td><td class="p-2">${countdown}</td></tr>`;
+                treeRight.innerHTML += `<tr class="hour-${hourPad} ${isSelected} cursor-pointer hover:opacity-80 border-b border-gray-300 font-bold" ${rowActionAttr(item.fbKey)}><td class="p-2 border-r border-gray-300 text-left font-bold">${item.displayName}</td><td class="p-2 border-r border-gray-300 font-bold">${item.data.last_kill}</td><td class="p-2 border-r border-gray-300 font-bold">${nextSpawnDisplay}</td><td class="p-2 border-r border-gray-300 font-bold">${item.pct}</td><td class="p-2 font-bold">${countdown}</td></tr>`;
             });
             
             treeLeft.parentElement.scrollTop = scrollLeftTop; treeRight.parentElement.scrollTop = scrollRightTop;
@@ -715,36 +782,51 @@
             for (let key in bossData) { if (bossData[key] && bossData[key].prefix) db.ref(key).remove(); }
         }
 
-        function triggerDoubleChime() {
+        // ฟังก์ชันส่งสัญญาณเสียงแจ้งเตือนชุดใหม่ รองรับการตั้ง Volume และตั้งจำนวนรอบ (Loop)
+        function triggerChime(isTest = false) {
             try {
+                // ดึงค่าการตั้งค่าจากหน้าเว็บมาคำนวณระดับเสียงและจำนวนครั้ง
+                const volSliderVal = parseInt(document.getElementById("cfgVolume").value) || 0;
+                const totalLoops = parseInt(document.getElementById("cfgNotifyLoop").value) || 1;
+                const gainVolume = volSliderVal / 100 * 0.15; // คุมไม่ให้ดังพีคเกินไป
+
                 let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                
                 let playTone = (freq, startDelay, duration) => {
                     setTimeout(() => {
-                        let osc = audioCtx.createOscillator(); let gainNode = audioCtx.createGain();
-                        osc.type = 'sine'; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                        let osc = audioCtx.createOscillator(); 
+                        let gainNode = audioCtx.createGain();
+                        osc.type = 'sine'; 
+                        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                        
                         gainNode.gain.setValueAtTime(0.01, audioCtx.currentTime);
-                        gainNode.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.05);
+                        gainNode.gain.linearRampToValueAtTime(gainVolume, audioCtx.currentTime + 0.05);
                         gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-                        osc.connect(gainNode); gainNode.connect(audioCtx.destination);
-                        osc.start(); osc.stop(audioCtx.currentTime + duration);
+                        
+                        osc.connect(gainNode); 
+                        gainNode.connect(audioCtx.destination);
+                        osc.start(); 
+                        osc.stop(audioCtx.currentTime + duration);
                     }, startDelay);
                 };
 
-                playTone(523.25, 0, 0.6);   
-                playTone(659.25, 120, 0.6); 
-                playTone(783.99, 240, 0.6); 
-                playTone(987.77, 360, 0.8); 
-
-                let secondRoundDelay = 1500;
-                playTone(523.25, secondRoundDelay + 0, 0.6);
-                playTone(659.25, secondRoundDelay + 120, 0.6);
-                playTone(783.99, secondRoundDelay + 240, 0.6);
-                playTone(987.77, secondRoundDelay + 360, 0.8);
-            } catch (e) { console.log(e); }
+                // วนลูปตามจำนวนครั้งที่ตั้งค่าไว้ (แต่ละรอบห่างกันรอบละ 1.4 วินาที)
+                for (let i = 0; i < totalLoops; i++) {
+                    let baseDelay = i * 1400;
+                    playTone(523.25, baseDelay + 0, 0.5);   
+                    playTone(659.25, baseDelay + 120, 0.5); 
+                    playTone(783.99, baseDelay + 240, 0.5); 
+                    playTone(987.77, baseDelay + 360, 0.6); 
+                }
+            } catch (e) { console.log("Audio Error:", e); }
         }
 
         function checkAlarms() {
             const now = new Date(); const pad = (n) => String(n).padStart(2, '0');
+            
+            // ดึงจำนวนนาทีที่ต้องการให้แจ้งเตือนล่วงหน้ามาจาก Select Option
+            const advanceMinutes = parseInt(document.getElementById("cfgNotifyAdvance").value) || 2;
+
             for (let key in bossData) {
                 let data = bossData[key]; if (!data) continue;
                 let nsStr = data.next_spawn || "-"; if (nsStr === "-") continue;
@@ -752,11 +834,12 @@
                 let dParts = parts[0].split("/"); let tParts = parts[1].split(":");
                 let nsDt = new Date(dParts[2], dParts[1]-1, dParts[0], tParts[0], tParts[1]);
                 
-                let notifyAdvanceTime = new Date(nsDt.getTime() - (2 * 60 * 1000)); 
+                // คำนวณเวลาแจ้งเตือนล่วงหน้าตามที่ผู้ใช้เลือกจริง
+                let notifyAdvanceTime = new Date(nsDt.getTime() - (advanceMinutes * 60 * 1000)); 
 
                 if (now >= notifyAdvanceTime && !data.notified) {
                     db.ref(key).update({ notified: true });
-                    triggerDoubleChime(); 
+                    triggerChime(); // ส่งสัญญาณเตือน
                 }
 
                 let thresholdDt = new Date(nsDt.getTime() + (1 * 60 * 1000) + (30 * 1000));
@@ -792,7 +875,7 @@
             }
         }
 
-        // ================= 🏗️ ฟังก์ชันระบบ Drag and Drop แบบกล่องสลับฝั่ง ซ้าย-ขวา =================
+        // ================= 🏗️ ฟังก์ชันระบบ Drag and Drop =================
         const cards = document.querySelectorAll('[draggable="true"]');
         const zones = document.querySelectorAll('.drag-zone');
 
