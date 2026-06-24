@@ -8,7 +8,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <style>
-        /* ชุดสีพาสเทลแยกตามชั่วโมงเกิด 00 - 23 (พอร์ตมาจาก Tkinter hour_colors) */
         .hour-00 { background-color: #FFEBEE; color: #C62828; } .hour-01 { background-color: #FCE4EC; color: #AD1457; }
         .hour-02 { background-color: #F3E5F5; color: #6A1B9A; } .hour-03 { background-color: #EDE7F6; color: #4527A0; }
         .hour-04 { background-color: #E8EAF6; color: #283593; } .hour-05 { background-color: #E3F2FD; color: #1565C0; }
@@ -26,12 +25,90 @@
 </head>
 <body class="bg-gray-100 font-sans p-4">
 
-    <div class="max-w-[1600px] mx-auto">
-        <div class="text-center my-2">
-            <div id="clockLabel" class="text-3xl font-bold text-red-600">เวลาปัจจุบัน: --/--/---- --:--:--</div>
+    <!-- ================= 🔒 หน้าจอระบบล็อกอิน / สมัครสมาชิก / ลืมรหัสผ่าน 🔒 ================= -->
+    <div id="loginScreen" class="fixed inset-0 bg-gray-900 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-96 text-center">
+            <h2 id="authTitle" class="text-xl font-bold text-gray-800 mb-2">🔒 เข้าสู่ระบบ Boss Tracker</h2>
+            <p id="authDesc" class="text-xs text-gray-500 mb-4">กรุณากรอกชื่อและรหัสผ่านเพื่อเข้าใช้งาน</p>
+            
+            <div class="space-y-3 mb-4 text-left">
+                <div>
+                    <label class="text-xs font-bold text-gray-600 block mb-1">ชื่อผู้ใช้ (Username):</label>
+                    <input type="text" id="authUsername" class="w-full p-2 border border-gray-300 rounded text-sm text-center font-semibold">
+                </div>
+                <div>
+                    <label id="passLabel" class="text-xs font-bold text-gray-600 block mb-1">รหัสผ่าน (Password):</label>
+                    <input type="password" id="authPassword" class="w-full p-2 border border-gray-300 rounded text-sm text-center">
+                </div>
+                <div id="confirmPasswordGroup" class="hidden">
+                    <label class="text-xs font-bold text-gray-600 block mb-1">ยืนยันรหัสผ่านอีกครั้ง (Confirm Password):</label>
+                    <input type="password" id="authConfirmPassword" class="w-full p-2 border border-gray-300 rounded text-sm text-center">
+                </div>
+            </div>
+
+            <div id="loginActionZone" class="space-y-2">
+                <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded text-sm transition shadow">เข้าสู่ระบบ</button>
+                <div class="flex justify-between text-xs px-1">
+                    <span onclick="toggleAuthMode('forgot')" class="text-red-500 cursor-pointer underline">ลืมรหัสผ่าน?</span>
+                    <span onclick="toggleAuthMode('register')" class="text-blue-600 cursor-pointer underline">กดสมัครสมาชิกที่นี่</span>
+                </div>
+            </div>
+            <div id="registerActionZone" class="space-y-2 hidden">
+                <button onclick="handleRegister()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded text-sm transition shadow">ส่งคำขอสมัครสมาชิก</button>
+                <p class="text-xs text-gray-500">มีบัญชีอยู่แล้ว? <span onclick="toggleAuthMode('login')" class="text-blue-600 cursor-pointer underline">กลับไปหน้าล็อกอิน</span></p>
+            </div>
+            <div id="forgotActionZone" class="space-y-2 hidden">
+                <button onclick="handleForgotPassword()" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded text-sm transition shadow">ส่งคำขอเปลี่ยนรหัสใหม่</button>
+                <p class="text-xs text-gray-500"><span onclick="toggleAuthMode('login')" class="text-blue-600 cursor-pointer underline">ย้อนกลับไปหน้าล็อกอิน</span></p>
+            </div>
+
+            <p id="authErrorMsg" class="text-red-500 text-xs mt-3 hidden font-semibold"></p>
+        </div>
+    </div>
+
+    <!-- ================= 💻 ส่วนเนื้อหาหลักเมื่อล็อกอินสำเร็จ 💻 ================= -->
+    <div id="mainContent" class="max-w-[1600px] mx-auto hidden">
+        
+        <!-- 👑 แผงควบคุมแอดมินฉบับแยกปุ่มสิทธิ์ละเอียด + ปุ่มลบบัญชี 👑 -->
+        <div id="adminPanel" class="bg-purple-50 p-4 rounded-lg shadow border-2 border-purple-300 mb-4 hidden">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="text-sm font-bold text-purple-900">👑 ระบบจัดการสมาชิกและการแก้ไข (สำหรับแอดมิน)</h3>
+                <button onclick="toggleUserListDisplay()" id="btnToggleUsers" class="bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold px-3 py-1.5 rounded shadow">
+                    👁️ แสดงรายชื่อสมาชิกทั้งหมด
+                </button>
+            </div>
+            
+            <div id="adminUsersZone" class="hidden border-t border-purple-200 pt-3">
+                <p class="text-xs text-gray-600 mb-2">รายชื่อคำขอและสมาชิก (คลิกเลือกชื่อเพื่อจัดการสิทธิ์รายคน):</p>
+                <div class="flex flex-wrap gap-2 mb-3" id="adminUserList"></div>
+                
+                <div class="flex flex-wrap items-center gap-2 bg-white p-3 rounded border border-purple-200 text-xs">
+                    <div class="w-full md:w-auto font-bold text-gray-700 mr-2 mb-2 md:mb-0">
+                        ยูสเซอร์ที่เลือก: <span id="selectedAdminUser" class="text-purple-700 underline">-</span>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button onclick="changeUserStatus('approve')" class="bg-green-600 hover:bg-green-700 text-white font-bold px-2.5 py-1 rounded shadow">✔️ อนุมัติเข้าเว็บ</button>
+                        <button onclick="changeUserStatus('block')" class="bg-red-500 hover:bg-red-600 text-white font-bold px-2.5 py-1 rounded shadow">❌ บล็อกไม่ให้เข้าเว็บ</button>
+                        <button onclick="changeUserStatus('grant_edit')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-2.5 py-1 rounded shadow">✍️ ให้สิทธิ์แก้ไข</button>
+                        <button onclick="changeUserStatus('revoke_edit')" class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-2.5 py-1 rounded shadow">👁️ ให้ดูได้อย่างเดียว</button>
+                        <button onclick="changeUserStatus('approve_new_pass')" id="btnApproveNewPass" class="bg-orange-500 hover:bg-orange-600 text-white font-bold px-2.5 py-1 rounded shadow hidden">🔑 อนุมัติรหัสใหม่</button>
+                        <button onclick="changeUserStatus('delete_account')" class="bg-red-800 hover:bg-red-950 text-white font-bold px-2.5 py-1 rounded shadow ml-4">🗑️ ลบบัญชีถาวร</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="bg-white p-4 rounded-lg shadow-md mb-4 border border-gray-200">
+        <div class="text-center my-2 flex justify-between items-center">
+            <div class="text-xs font-bold text-blue-800 bg-blue-50 px-3 py-1.5 rounded border border-blue-200 flex items-center gap-1">
+                <span>ผู้ใช้งาน:</span> <span id="displayCurrentUser">-</span>
+                <span id="displayUserRole" class="text-[10px] px-1.5 py-0.5 rounded ml-1 font-bold"></span>
+            </div>
+            <div id="clockLabel" class="text-3xl font-bold text-red-600">เวลาปัจจุบัน: --/--/---- --:--:--</div>
+            <button onclick="logout()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold px-3 py-1.5 text-xs rounded shadow">🔒 ออกจากระบบ</button>
+        </div>
+
+        <!-- ส่วนที่ 1: ตั้งค่าโปรไฟล์บอส -->
+        <div id="bossInputArea" class="bg-white p-4 rounded-lg shadow-md mb-4 border border-gray-200 hidden">
             <h2 class="text-md font-bold text-blue-700 mb-3">🛠️ 1. ตั้งค่าบอสและเวลาเกิดใหม่ (ดับเบิลคลิกแถวในตารางเพื่อดึงมาแก้ไข)</h2>
             <div class="grid grid-cols-1 md:grid-cols-7 gap-3 items-end">
                 <div>
@@ -68,21 +145,26 @@
             </div>
         </div>
 
+        <!-- ส่วนที่ 2: ค้นหาชื่อบอส -->
         <div class="bg-white p-3 rounded-lg shadow-md mb-4 border border-gray-200 flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center space-x-2">
                 <span class="text-sm font-bold text-green-800">🔍 ค้นหาบอส:</span>
                 <input type="text" id="entrySearch" oninput="updateTable()" class="rounded border border-gray-300 p-1.5 text-sm w-48" placeholder="พิมพ์ชื่อเพื่อค้นหา...">
             </div>
-            <div class="flex items-center space-x-2 flex-wrap gap-2">
+            <div id="bossActionButtons" class="flex items-center space-x-2 flex-wrap gap-2 hidden">
                 <button onclick="openKillModal()" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 text-sm rounded shadow">✔️ กดบันทักเวลาบอสตายล่าสุด (บันทึกเวลาปัจจุบัน)</button>
                 <button onclick="deleteBoss()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-3 py-2 text-xs rounded shadow">🗑️ ลบบอสที่เลือก</button>
                 <button onclick="deleteAllSpecialBosses()" class="bg-purple-900 hover:bg-purple-950 text-white font-bold px-3 py-2 text-xs rounded shadow"> ลบบอสข้ามเซิฟ(ลบทั้งหมด)</button>
-                </div>
+            </div>
+            <div id="viewerAlertText" class="text-xs font-bold text-gray-500 hidden bg-gray-50 px-3 py-2 rounded border border-gray-200">
+                👁️ คุณอยู่ในโหมด "ดูได้อย่างเดียว"
+            </div>
         </div>
 
+        <!-- ส่วนที่ 3: ตารางแสดงผลบอส -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div class="bg-white p-3 rounded-lg shadow border border-gray-200">
-                <h3 class="text-md font-bold text-green-700 mb-2">⏳ บอสกำลังคูลดาวน์</h3>
+                <h3 class="text-md font-bold text-green-700 mb-2">⏳ บอสกำลังคูลดาวน์รวม (เกิน 5 นาที แยกกลุ่มสีตามรายชั่วโมง)</h3>
                 <div class="overflow-auto max-h-[600px] border border-gray-300">
                     <table class="min-w-full text-sm text-center border-collapse">
                         <thead class="bg-gray-100 sticky top-0 border-b border-gray-300 shadow-sm z-10">
@@ -100,7 +182,7 @@
             </div>
 
             <div class="bg-white p-3 rounded-lg shadow border border-gray-200">
-                <h3 class="text-md font-bold text-red-700 mb-2">🚨 เตรียมตัวล่า</h3>
+                <h3 class="text-md font-bold text-red-700 mb-2">🚨 เตรียมตัวล่า! (เกิดแล้ว หรือเหลืออีกไม่เกิน 5 นาที)</h3>
                 <div class="overflow-auto max-h-[600px] border border-gray-300">
                     <table class="min-w-full text-sm text-center border-collapse">
                         <thead class="bg-gray-100 sticky top-0 border-b border-gray-300 shadow-sm z-10">
@@ -119,6 +201,7 @@
         </div>
     </div>
 
+    <!-- ป๊อปอัปบอสข้ามเซิฟ -->
     <div id="prefixModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-5 rounded-lg shadow-lg w-96">
             <h3 class="text-md font-bold text-purple-800 mb-3">ก๊อปปี้บอสไปช่องพิเศษ</h3>
@@ -131,6 +214,7 @@
         </div>
     </div>
 
+    <!-- ป๊อปอัปเวลาบอสตาย -->
     <div id="killModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-5 rounded-lg shadow-lg w-96">
             <h3 class="text-md font-bold text-green-800 mb-2" id="killModalTitle">บันทึกเวลาบอสตาย</h3>
@@ -151,439 +235,544 @@
         const db = firebase.database();
 
         let bossData = {};
+        let allUsersData = {};
         let selectedBossKey = null;
+        let adminSelectedUser = null;
+        let currentUserRole = "viewer"; 
+        let showUserList = false;
 
-        function updateClock() {
-            const now = new Date();
-            const pad = (n) => String(n).padStart(2, '0');
-            const str = `เวลาปัจจุบัน: ${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-            document.getElementById("clockLabel").innerText = str;
-            setTimeout(updateClock, 1000);
+        function toggleAuthMode(mode) {
+            document.getElementById("authErrorMsg").classList.add("hidden");
+            document.getElementById("confirmPasswordGroup").classList.add("hidden");
+            document.getElementById("loginActionZone").classList.add("hidden");
+            document.getElementById("registerActionZone").classList.add("hidden");
+            document.getElementById("forgotActionZone").classList.add("hidden");
+            document.getElementById("passLabel").innerText = "รหัสผ่าน (Password):";
+
+            if (mode === 'register') {
+                document.getElementById("authTitle").innerText = "📝 สมัครสมาชิก Boss Tracker";
+                document.getElementById("authDesc").innerText = "กรอกข้อมูลและยืนยันรหัสเพื่อส่งคำขอเปิดบัญชีกับแอดมิน";
+                document.getElementById("confirmPasswordGroup").classList.remove("hidden");
+                document.getElementById("registerActionZone").classList.remove("hidden");
+            } else if (mode === 'forgot') {
+                document.getElementById("authTitle").innerText = "🔑 ลืมรหัสผ่าน / ขอเปลี่ยนรหัสใหม่";
+                document.getElementById("authDesc").innerText = "ระบุชื่อไอดีเดิม และตั้งรหัสผ่านใหม่ที่คุณต้องการเปลี่ยน";
+                document.getElementById("passLabel").innerText = "รหัสผ่านใหม่ที่ต้องการเปลี่ยน:";
+                document.getElementById("confirmPasswordGroup").classList.remove("hidden");
+                document.getElementById("forgotActionZone").classList.remove("hidden");
+            } else {
+                document.getElementById("authTitle").innerText = "🔒 เข้าสู่ระบบ Boss Tracker";
+                document.getElementById("authDesc").innerText = "กรุณากรอกชื่อและรหัสผ่านเพื่อเข้าใช้งาน";
+                document.getElementById("loginActionZone").classList.remove("hidden");
+            }
         }
-        updateClock();
 
-        db.ref('/').on('value', (snapshot) => {
-            bossData = snapshot.val() || {};
-            updateTable();
-        });
+        function handleRegister() {
+            const user = document.getElementById("authUsername").value.trim().toLowerCase();
+            const pass = document.getElementById("authPassword").value.trim();
+            const confirmPass = document.getElementById("authConfirmPassword").value.trim();
+            const errorLabel = document.getElementById("authErrorMsg");
+
+            if (!user || !pass || !confirmPass) {
+                errorLabel.innerText = "❌ กรุณากรอกข้อมูลให้ครบถ้วนทุกช่อง";
+                errorLabel.classList.remove("hidden"); return;
+            }
+            if (pass !== confirmPass) {
+                errorLabel.innerText = "❌ รหัสผ่านทั้ง 2 ช่องไม่ตรงกัน กรุณาเช็คอีกครั้ง";
+                errorLabel.classList.remove("hidden"); return;
+            }
+            if (user === "admin") {
+                errorLabel.innerText = "❌ ไม่สามารถสมัครด้วยชื่อไอดี admin ได้";
+                errorLabel.classList.remove("hidden"); return;
+            }
+
+            db.ref('users/' + user).get().then((snapshot) => {
+                if (snapshot.exists()) {
+                    errorLabel.innerText = "❌ มีชื่อไอดีนี้ในระบบแล้ว";
+                    errorLabel.classList.remove("hidden");
+                } else {
+                    db.ref('users/' + user).set({
+                        password: pass,
+                        approved: false, 
+                        can_edit: false, 
+                        pending_forgot: false
+                    }).then(() => {
+                        alert("✅ ส่งคำขอสมัครสมาชิกสำเร็จ! บัญชีของคุณอยู่ระหว่างรอแอดมิน 'กดยืนยันอนุมัติ' ถึงจะเริ่มเข้าสู่ระบบได้ครับ");
+                        toggleAuthMode('login');
+                    });
+                }
+            });
+        }
+
+        function handleForgotPassword() {
+            const user = document.getElementById("authUsername").value.trim().toLowerCase();
+            const newPass = document.getElementById("authPassword").value.trim();
+            const confirmPass = document.getElementById("authConfirmPassword").value.trim();
+            const errorLabel = document.getElementById("authErrorMsg");
+
+            if (!user || !newPass || !confirmPass) {
+                errorLabel.innerText = "❌ กรุณากรอกข้อมูลให้ครบถ้วนทุกช่อง";
+                errorLabel.classList.remove("hidden"); return;
+            }
+            if (newPass !== confirmPass) {
+                errorLabel.innerText = "❌ รหัสผ่านใหม่ทั้ง 2 ช่องไม่ตรงกัน";
+                errorLabel.classList.remove("hidden"); return;
+            }
+
+            db.ref('users/' + user).get().then((snapshot) => {
+                if (!snapshot.exists()) {
+                    errorLabel.innerText = "❌ ไม่พบชื่อไอดีนี้ในระบบ";
+                    errorLabel.classList.remove("hidden");
+                } else {
+                    db.ref('users/' + user).update({
+                        requested_password: newPass, 
+                        pending_forgot: true 
+                    }).then(() => {
+                        alert("🔒 ส่งคำขอเปลี่ยนรหัสแล้ว! รหัสผ่านใหม่จะยังใช้งานไม่ได้ทันที จนกว่าแอดมินจะกด 'อนุมัติรหัสใหม่' ผ่านทางหน้าควบคุมครับ");
+                        toggleAuthMode('login');
+                    });
+                }
+            });
+        }
+
+        function handleLogin() {
+            const user = document.getElementById("authUsername").value.trim().toLowerCase();
+            const pass = document.getElementById("authPassword").value.trim();
+            const errorLabel = document.getElementById("authErrorMsg");
+
+            if (!user || !pass) {
+                errorLabel.innerText = "❌ กรุณากรอกข้อมูลให้ครบถ้วน";
+                errorLabel.classList.remove("hidden"); return;
+            }
+
+            if (user === "admin" && pass === "090058839z") {
+                executeLoginSuccess("admin", "admin"); return;
+            }
+
+            db.ref('users/' + user).get().then((snapshot) => {
+                if (snapshot.exists()) {
+                    let userData = snapshot.val();
+                    if (userData.password === pass) {
+                        if (userData.approved === true) {
+                            let role = userData.can_edit ? "editor" : "viewer";
+                            executeLoginSuccess(user, role);
+                        } else {
+                            errorLabel.innerText = "⏳ บัญชีของคุณยังไม่ได้รับการอนุมัติเปิดสิทธิ์เข้าใช้งานจากแอดมิน";
+                            errorLabel.classList.remove("hidden");
+                        }
+                    } else {
+                        errorLabel.innerText = "❌ รหัสผ่านไม่ถูกต้อง";
+                        errorLabel.classList.remove("hidden");
+                    }
+                } else {
+                    errorLabel.innerText = "❌ ไม่พบชื่อผู้ใช้นี้ในระบบ";
+                    errorLabel.classList.remove("hidden");
+                }
+            });
+        }
+
+        function executeLoginSuccess(username, role) {
+            localStorage.setItem("currentBossUser", username);
+            document.getElementById("loginScreen").classList.add("hidden");
+            document.getElementById("mainContent").classList.remove("hidden");
+            document.getElementById("displayCurrentUser").innerText = username;
+            
+            currentUserRole = role;
+            const roleBadge = document.getElementById("displayUserRole");
+
+            if (role === "admin") {
+                roleBadge.innerText = "แอดมิน (สูงสุด)";
+                roleBadge.className = "text-[10px] px-1.5 py-0.5 rounded ml-1 bg-purple-600 text-white font-bold";
+                document.getElementById("adminPanel").classList.remove("hidden");
+                document.getElementById("bossInputArea").classList.remove("hidden");
+                document.getElementById("bossActionButtons").classList.remove("hidden");
+                document.getElementById("viewerAlertText").classList.add("hidden");
+                listenUsersData();
+            } else if (role === "editor") {
+                roleBadge.innerText = "ผู้แก้ไขข้อมูล";
+                roleBadge.className = "text-[10px] px-1.5 py-0.5 rounded ml-1 bg-green-600 text-white font-bold";
+                document.getElementById("adminPanel").classList.add("hidden");
+                document.getElementById("bossInputArea").classList.remove("hidden");
+                document.getElementById("bossActionButtons").classList.remove("hidden");
+                document.getElementById("viewerAlertText").classList.add("hidden");
+            } else {
+                roleBadge.innerText = "ดูได้อย่างเดียว";
+                roleBadge.className = "text-[10px] px-1.5 py-0.5 rounded ml-1 bg-gray-500 text-white font-bold";
+                document.getElementById("adminPanel").classList.add("hidden");
+                document.getElementById("bossInputArea").classList.add("hidden");
+                document.getElementById("bossActionButtons").classList.add("hidden");
+                document.getElementById("viewerAlertText").classList.remove("hidden");
+            }
+
+            if (username !== "admin") {
+                db.ref('users/' + username).on('value', (snap) => {
+                    if (snap.exists()) {
+                        let uData = snap.val();
+                        if (uData.approved === false) {
+                            alert("🔒 บัญชีของคุณถูกตัดสิทธิ์หรือระงับการใช้งานโดยแอดมิน");
+                            logout();
+                        } else {
+                            let newRole = uData.can_edit ? "editor" : "viewer";
+                            if (newRole !== currentUserRole) {
+                                currentUserRole = newRole;
+                                executeLoginSuccess(username, newRole);
+                            }
+                        }
+                    } else {
+                        alert("🔒 บัญชีของคุณถูกลบออกจากระบบโดยแอดมิน");
+                        logout();
+                    }
+                });
+            }
+
+            db.ref('/').on('value', (snapshot) => {
+                let allData = snapshot.val() || {};
+                bossData = {};
+                for (let k in allData) {
+                    if (k !== "users") bossData[k] = allData[k];
+                }
+                updateTable();
+            });
+        }
+
+        function toggleUserListDisplay() {
+            showUserList = !showUserList;
+            const zone = document.getElementById("adminUsersZone");
+            const btn = document.getElementById("btnToggleUsers");
+            if (showUserList) {
+                zone.classList.remove("hidden"); btn.innerText = "🙈 ซ่อนรายชื่อสมาชิก";
+            } else {
+                zone.classList.add("hidden"); btn.innerText = "👁️ แสดงรายชื่อสมาชิกทั้งหมด";
+            }
+        }
+
+        function listenUsersData() {
+            db.ref('users').on('value', (snapshot) => {
+                allUsersData = snapshot.val() || {};
+                const listContainer = document.getElementById("adminUserList");
+                listContainer.innerHTML = "";
+
+                for (let username in allUsersData) {
+                    let uData = allUsersData[username];
+                    let statusColor = "bg-green-100 text-green-800 border-green-400";
+                    let statusText = uData.can_edit ? "เข้าได้+แก้ไขได้" : "เข้าได้+ดูเท่านั้น";
+
+                    if (uData.pending_forgot) {
+                        statusColor = "bg-orange-100 text-orange-800 border-orange-500 animate-bounce";
+                        statusText = "ขอเปลี่ยนรหัสใหม่";
+                    } else if (!uData.approved) {
+                        statusColor = "bg-red-100 text-red-800 border-red-400 animate-pulse";
+                        statusText = "สมัครใหม่รออนุมัติเข้าเว็บ";
+                    }
+                    
+                    listContainer.innerHTML += `
+                        <button onclick="selectAdminUser('${username}')" class="text-xs font-semibold px-3 py-1.5 rounded border ${statusColor} shadow-sm">
+                            👤 ${username} [${statusText}]
+                        </button>
+                    `;
+                }
+            });
+        }
+
+        function selectAdminUser(username) {
+            adminSelectedUser = username;
+            document.getElementById("selectedAdminUser").innerText = username;
+            
+            let uData = allUsersData[username];
+            const btnNewPass = document.getElementById("btnApproveNewPass");
+            if (uData && uData.pending_forgot) {
+                btnNewPass.classList.remove("hidden");
+            } else {
+                btnNewPass.classList.add("hidden");
+            }
+        }
+
+        function changeUserStatus(action) {
+            if (!adminSelectedUser) return alert("กรุณาคลิกเลือกชื่อบัญชีผู้ใช้ก่อนกดครับ");
+            
+            if (action === 'approve') {
+                db.ref('users/' + adminSelectedUser).update({ approved: true })
+                  .then(() => alert(`✔️ อนุมัติให้ไอดี [${adminSelectedUser}] เข้าสู่เว็บไซต์ได้เรียบร้อย!`));
+            } else if (action === 'block') {
+                db.ref('users/' + adminSelectedUser).update({ approved: false })
+                  .then(() => alert(`❌ ระงับ/บล็อก ไม่ให้ไอดี [${adminSelectedUser}] เข้าสู่เว็บไซต์`));
+            } else if (action === 'grant_edit') {
+                db.ref('users/' + adminSelectedUser).update({ can_edit: true })
+                  .then(() => alert(`✍️ มอบสิทธิ์ให้ไอดี [${adminSelectedUser}] สามารถเพิ่ม/แก้ไขข้อมูลบอสได้`));
+            } else if (action === 'revoke_edit') {
+                db.ref('users/' + adminSelectedUser).update({ can_edit: false })
+                  .then(() => alert(`👁️ ปรับลดสิทธิ์ไอดี [${adminSelectedUser}] ให้เป็น 'ดูได้อย่างเดียว'`));
+            } else if (action === 'approve_new_pass') {
+                let uData = allUsersData[adminSelectedUser];
+                if (uData && uData.requested_password) {
+                    db.ref('users/' + adminSelectedUser).update({
+                        password: uData.requested_password, 
+                        requested_password: null,
+                        pending_forgot: false
+                    }).then(() => alert(`🔑 อนุมัติรหัสผ่านใหม่ของไอดี [${adminSelectedUser}] สำเร็จ!`));
+                }
+            } else if (action === 'delete_account') {
+                if (confirm(`⚠️ ยืนยันการลบบัญชี [${adminSelectedUser}] ออกจากระบบถาวร ใช่หรือไม่?`)) {
+                    db.ref('users/' + adminSelectedUser).remove()
+                      .then(() => alert(`🗑️ ลบข้อมูลบัญชี [${adminSelectedUser}] ออกจากฐานข้อมูลเรียบร้อย!`));
+                }
+            }
+
+            document.getElementById("selectedAdminUser").innerText = "-";
+            document.getElementById("btnApproveNewPass").classList.add("hidden");
+            adminSelectedUser = null;
+        }
+
+        function logout() {
+            localStorage.removeItem("currentBossUser"); window.location.reload();
+        }
+
+        const savedUser = localStorage.getItem("currentBossUser");
+        if (savedUser) {
+            if (savedUser === "admin") { executeLoginSuccess("admin", "admin"); } 
+            else {
+                db.ref('users/' + savedUser).get().then((snapshot) => {
+                    if (snapshot.exists() && snapshot.val().approved) {
+                        let role = snapshot.val().can_edit ? "editor" : "viewer";
+                        executeLoginSuccess(savedUser, role);
+                    } else { logout(); }
+                });
+            }
+        }
 
         function getCountdownFormat(ms) {
             if (ms <= 0) return "🔥 เกิดแล้ว!";
             let total_sec = Math.floor(ms / 1000);
             let hours = Math.floor(total_sec / 3600);
             let remainder = total_sec % 3600;
-            let minutes = Math.floor(remainder / 60);
-            let seconds = remainder % 60;
-            return `${String(hours).padStart(2, '0')} ชม. ${String(minutes).padStart(2, '0')} น. ${String(seconds).padStart(2, '0')} วิ`;
+            return `${String(hours).padStart(2, '0')} ชม. ${String(Math.floor(remainder / 60)).padStart(2, '0')} น. ${String(remainder % 60).padStart(2, '0')} วิ`;
         }
 
-        function encodeFirebaseKey(str) {
-            return str.replace(/[\[\]\.\$\#\/]/g, "_").trim();
-        }
+        function encodeFirebaseKey(str) { return str.replace(/[\[\]\.\$\#\/]/g, "_").trim(); }
 
         function updateTable() {
             const now = new Date();
             const searchQuery = document.getElementById("entrySearch").value.trim().toLowerCase();
-            
             const treeLeft = document.getElementById("treeLeft");
             const treeRight = document.getElementById("treeRight");
-            
             const scrollLeftTop = treeLeft.parentElement.scrollTop;
             const scrollRightTop = treeRight.parentElement.scrollTop;
 
-            treeLeft.innerHTML = "";
-            treeRight.innerHTML = "";
-
-            let leftList = [];
-            let rightList = [];
+            treeLeft.innerHTML = ""; treeRight.innerHTML = "";
+            let leftList = []; let rightList = [];
 
             for (let key in bossData) {
-                let data = bossData[key];
-                if (!data) continue;
-
+                let data = bossData[key]; if (!data) continue;
                 let prefixStr = data.prefix ? `[${data.prefix}] ` : "";
                 let displayName = prefixStr + (data.boss_name || key);
-
                 if (searchQuery && !displayName.toLowerCase().includes(searchQuery)) continue;
+                let nsStr = data.next_spawn || "-"; let pct = data.percent || "100%";
 
-                let nsStr = data.next_spawn || "-";
-                let pct = data.percent || "100%";
-
-                if (nsStr === "-") {
-                    rightList.push({ fbKey: key, displayName, data, nsDt: null, pct });
-                    continue;
-                }
-
-                let parts = nsStr.split(" ");
-                if (parts.length < 2) {
-                    rightList.push({ fbKey: key, displayName, data, nsDt: null, pct });
-                    continue;
-                }
-                let dParts = parts[0].split("/");
-                let tParts = parts[1].split(":");
+                if (nsStr === "-") { rightList.push({ fbKey: key, displayName, data, nsDt: null, pct }); continue; }
+                let parts = nsStr.split(" "); if (parts.length < 2) { rightList.push({ fbKey: key, displayName, data, nsDt: null, pct }); continue; }
+                let dParts = parts[0].split("/"); let tParts = parts[1].split(":");
                 let nsDt = new Date(dParts[2], dParts[1]-1, dParts[0], tParts[0], tParts[1]);
-
-                let timeDiffMin = (nsDt - now) / 60000;
-
-                if (timeDiffMin <= 5) {
-                    rightList.push({ fbKey: key, displayName, data, nsDt, pct });
-                } else {
-                    leftList.push({ fbKey: key, displayName, data, nsDt, pct });
-                }
+                if ((nsDt - now) / 60000 <= 5) { rightList.push({ fbKey: key, displayName, data, nsDt, pct }); } 
+                else { leftList.push({ fbKey: key, displayName, data, nsDt, pct }); }
             }
 
             leftList.sort((a, b) => a.nsDt - b.nsDt);
             rightList.sort((a, b) => (a.nsDt || new Date(8640000000000000)) - (b.nsDt || new Date(8640000000000000)));
 
-            leftList.forEach(item => {
-                let diff = item.nsDt - now;
-                let countdown = getCountdownFormat(diff);
-                let hourPad = String(item.nsDt.getHours()).padStart(2, '0');
-                let minPad = String(item.nsDt.getMinutes()).padStart(2, '0');
-                let dayPad = String(item.nsDt.getDate()).padStart(2, '0');
-                let monPad = String(item.nsDt.getMonth()+1).padStart(2, '0');
-                
-                let nextSpawnDisplay = `${dayPad}/${monPad} ${hourPad}:${minPad}`;
-                let hourClass = `hour-${hourPad}`;
-                let isSelected = selectedBossKey === item.fbKey ? 'selected-row' : '';
+            let rowActionAttr = (itemKey) => (currentUserRole === "admin" || currentUserRole === "editor") ? `onclick="selectBoss('${itemKey}')" ondblclick="loadToEdit('${itemKey}')"` : `onclick="selectBoss('${itemKey}')"`;
 
-                treeLeft.innerHTML += `
-                    <tr class="${hourClass} ${isSelected} cursor-pointer hover:opacity-80 border-b border-gray-200 font-medium" 
-                        onclick="selectBoss('${item.fbKey}')" ondblclick="loadToEdit('${item.fbKey}')">
-                        <td class="p-2 border-r border-gray-300 text-left">${item.displayName}</td>
-                        <td class="p-2 border-r border-gray-300">${item.data.last_kill}</td>
-                        <td class="p-2 border-r border-gray-300">${nextSpawnDisplay}</td>
-                        <td class="p-2 border-r border-gray-300">${item.pct}</td>
-                        <td class="p-2">${countdown}</td>
-                    </tr>`;
+            leftList.forEach(item => {
+                let countdown = getCountdownFormat(item.nsDt - now);
+                let hourPad = String(item.nsDt.getHours()).padStart(2, '0');
+                let nextSpawnDisplay = `${String(item.nsDt.getDate()).padStart(2, '0')}/${String(item.nsDt.getMonth()+1).padStart(2, '0')} ${hourPad}:${String(item.nsDt.getMinutes()).padStart(2, '0')}`;
+                let isSelected = selectedBossKey === item.fbKey ? 'selected-row' : '';
+                treeLeft.innerHTML += `<tr class="hour-${hourPad} ${isSelected} cursor-pointer hover:opacity-80 border-b border-gray-200 font-medium" ${rowActionAttr(item.fbKey)}><td class="p-2 border-r border-gray-300 text-left">${item.displayName}</td><td class="p-2 border-r border-gray-300">${item.data.last_kill}</td><td class="p-2 border-r border-gray-300">${nextSpawnDisplay}</td><td class="p-2 border-r border-gray-300">${item.pct}</td><td class="p-2">${countdown}</td></tr>`;
             });
 
             rightList.forEach(item => {
-                let statusText = "";
-                let rowTagClass = "";
-                let nsDisplay = "-";
-
+                let statusText = "", rowTagClass = "", nsDisplay = "-";
                 if (item.nsDt) {
-                    let hourPad = String(item.nsDt.getHours()).padStart(2, '0');
-                    let minPad = String(item.nsDt.getMinutes()).padStart(2, '0');
-                    let dayPad = String(item.nsDt.getDate()).padStart(2, '0');
-                    let monPad = String(item.nsDt.getMonth()+1).padStart(2, '0');
-                    nsDisplay = `${dayPad}/${monPad} ${hourPad}:${minPad}`;
-
-                    if (now >= item.nsDt) {
-                        let lateMin = Math.floor((now - item.nsDt) / 60000);
-                        statusText = `🔥 เกิดแล้ว! (เลท ${lateMin} น.)`;
-                    } else {
-                        statusText = `⏳ อีก ${getCountdownFormat(item.nsDt - now)}`;
-                    }
+                    nsDisplay = `${String(item.nsDt.getDate()).padStart(2, '0')}/${String(item.nsDt.getMonth()+1).padStart(2, '0')} ${String(item.nsDt.getHours()).padStart(2, '0')}:${String(item.nsDt.getMinutes()).padStart(2, '0')}`;
+                    statusText = now >= item.nsDt ? `🔥 เกิดแล้ว! (เลท ${Math.floor((now - item.nsDt) / 60000)} น.)` : `⏳ อีก ${getCountdownFormat(item.nsDt - now)}`;
                     rowTagClass = "text-red-600 font-bold bg-red-50";
-                } else {
-                    statusText = "📝 รอข้อมูล";
-                    rowTagClass = "text-gray-400 bg-gray-50";
-                }
-
+                } else { statusText = "📝 รอข้อมูล"; rowTagClass = "text-gray-400 bg-gray-50"; }
                 let isSelected = selectedBossKey === item.fbKey ? 'selected-row' : '';
-
-                treeRight.innerHTML += `
-                    <tr class="${rowTagClass} ${isSelected} cursor-pointer hover:opacity-80 border-b border-gray-200" 
-                        onclick="selectBoss('${item.fbKey}')" ondblclick="loadToEdit('${item.fbKey}')">
-                        <td class="p-2 border-r border-gray-300 text-left text-black font-semibold">${item.displayName}</td>
-                        <td class="p-2 border-r border-gray-300 text-black font-normal">${item.data.last_kill}</td>
-                        <td class="p-2 border-r border-gray-300 text-black font-normal">${nsDisplay}</td>
-                        <td class="p-2 border-r border-gray-300 text-black font-normal">${item.pct}</td>
-                        <td class="p-2">${statusText}</td>
-                    </tr>`;
+                treeRight.innerHTML += `<tr class="${rowTagClass} ${isSelected} cursor-pointer hover:opacity-80 border-b border-gray-200" ${rowActionAttr(item.fbKey)}><td class="p-2 border-r border-gray-300 text-left text-black font-semibold">${item.displayName}</td><td class="p-2 border-r border-gray-300 text-black font-normal">${item.data.last_kill}</td><td class="p-2 border-r border-gray-300 text-black font-normal">${nsDisplay}</td><td class="p-2 border-r border-gray-300 text-black font-normal">${item.pct}</td><td class="p-2">${statusText}</td></tr>`;
             });
-
-            treeLeft.parentElement.scrollTop = scrollLeftTop;
-            treeRight.parentElement.scrollTop = scrollRightTop;
+            treeLeft.parentElement.scrollTop = scrollLeftTop; treeRight.parentElement.scrollTop = scrollRightTop;
         }
 
-        function selectBoss(fbKey) {
-            selectedBossKey = fbKey;
-            updateTable();
-        }
+        function selectBoss(fbKey) { selectedBossKey = fbKey; updateTable(); }
 
         function loadToEdit(fbKey) {
-            let data = bossData[fbKey];
-            if (!data) return;
-            
+            let data = bossData[fbKey]; if (!data) return;
             let prefixStr = data.prefix ? `[${data.prefix}] ` : "";
             document.getElementById("entryName").value = prefixStr + (data.boss_name || fbKey);
             document.getElementById("entryLastKill").value = data.last_kill || "-";
             document.getElementById("entryHr").value = data.respawn_hr || 12;
             document.getElementById("entryMin").value = data.respawn_min || 0;
             document.getElementById("entryPercent").value = (data.percent || "100%").replace("%", "");
-            
-            selectedBossKey = fbKey;
-            updateTable();
+            selectedBossKey = fbKey; updateTable();
         }
 
         function calculateAndSave() {
             let rawName = document.getElementById("entryName").value.trim();
             let lastKillStr = document.getElementById("entryLastKill").value.trim();
             let pctStr = document.getElementById("entryPercent").value.trim().replace("%", "");
-
             if (!rawName) return alert("กรุณากรอกชื่อบอสด้วยครับ");
-
             let hr = parseInt(document.getElementById("entryHr").value) || 0;
             let mn = parseInt(document.getElementById("entryMin").value) || 0;
             if (hr === 0 && mn === 0) return alert("กรุณากรอกระยะเวลาเกิดใหม่ให้ถูกต้อง");
-
             let nextSpawn = "-";
             if (lastKillStr && lastKillStr !== "-") {
                 let parts = lastKillStr.split(" ");
                 if (parts.length >= 2) {
-                    let dParts = parts[0].split("/");
-                    let tParts = parts[1].split(":");
+                    let dParts = parts[0].split("/"); let tParts = parts[1].split(":");
                     let lkDt = new Date(dParts[2], dParts[1]-1, dParts[0], tParts[0], tParts[1]);
-                    
                     if (!isNaN(lkDt)) {
-                        lkDt.setHours(lkDt.getHours() + hr);
-                        lkDt.setMinutes(lkDt.getMinutes() + mn);
+                        lkDt.setHours(lkDt.getHours() + hr); lkDt.setMinutes(lkDt.getMinutes() + mn);
                         const pad = (n) => String(n).padStart(2, '0');
                         nextSpawn = `${pad(lkDt.getDate())}/${pad(lkDt.getMonth()+1)}/${lkDt.getFullYear()} ${pad(lkDt.getHours())}:${pad(lkDt.getMinutes())}`;
-                    } else {
-                        return alert("รูปแบบเวลาผิดพลาด! กรุณากรอกในรูปแบบ DD/MM/YYYY HH:MM");
-                    }
-                } else {
-                    return alert("รูปแบบเวลาผิดพลาด! กรุณากรอกในรูปแบบ DD/MM/YYYY HH:MM");
+                    } else { return alert("รูปแบบเวลาผิดพลาด!"); }
                 }
             }
-
-            let prefix = "";
-            let bossName = rawName;
-            if (rawName.startsWith("[") && rawName.includes("] ")) {
-                prefix = rawName.split("] ")[0].replace("[", "");
-                bossName = rawName.split("] ")[1];
-            }
-
+            let prefix = ""; let bossName = rawName;
+            if (rawName.startsWith("[") && rawName.includes("] ")) { prefix = rawName.split("] ")[0].replace("[", ""); bossName = rawName.split("] ")[1]; }
             let finalFbKey = encodeFirebaseKey(rawName);
-
-            db.ref(finalFbKey).update({
-                boss_name: bossName,
-                prefix: prefix,
-                last_kill: lastKillStr,
-                respawn_hr: hr,
-                respawn_min: mn,
-                percent: pctStr + "%",
-                next_spawn: nextSpawn,
-                notified: false
-            }).then(() => {
-                document.getElementById("entryName").value = "";
-                document.getElementById("entryLastKill").value = "-";
-                document.getElementById("entryPercent").value = "100";
-                selectedBossKey = null;
+            db.ref(finalFbKey).update({ boss_name: bossName, prefix: prefix, last_kill: lastKillStr, respawn_hr: hr, respawn_min: mn, percent: pctStr + "%", next_spawn: nextSpawn, notified: false }).then(() => {
+                document.getElementById("entryName").value = ""; document.getElementById("entryLastKill").value = "-"; document.getElementById("entryPercent").value = "100"; selectedBossKey = null;
             });
         }
 
-        function openPrefixModal() {
-            document.getElementById("modalPrefixInput").value = "";
-            document.getElementById("prefixModal").classList.remove("hidden");
-        }
-        function closePrefixModal() {
-            document.getElementById("prefixModal").classList.add("hidden");
-        }
         function submitCopyToSpecial() {
-            let newPrefix = document.getElementById("modalPrefixInput").value.trim();
-            if (!newPrefix) return alert("กรุณากรอกคำนำหน้าด้วยครับ");
-            
-            let count = 0;
-            let promises = [];
-
+            let newPrefix = document.getElementById("modalPrefixInput").value.trim(); if (!newPrefix) return alert("กรุณากรอกคำนำหน้าด้วยครับ");
+            let count = 0; let promises = [];
             for (let key in bossData) {
-                let currentItem = bossData[key];
-                if (!currentItem) continue;
-
+                let currentItem = bossData[key]; if (!currentItem) continue;
                 let baseBossName = currentItem.boss_name || key;
-                let fullNewName = `[${newPrefix}] ${baseBossName}`;
-                let secureKey = encodeFirebaseKey(fullNewName);
-
-                let p = db.ref(secureKey).update({
-                    boss_name: baseBossName,
-                    prefix: newPrefix,
-                    last_kill: "-",
-                    respawn_hr: currentItem.respawn_hr || 12,
-                    respawn_min: currentItem.respawn_min || 0,
-                    percent: currentItem.percent || "100%",
-                    next_spawn: "-",
-                    notified: false
-                });
-                
-                promises.push(p);
-                count++;
+                let secureKey = encodeFirebaseKey(`[${newPrefix}] ${baseBossName}`);
+                let p = db.ref(secureKey).update({ boss_name: baseBossName, prefix: newPrefix, last_kill: "-", respawn_hr: currentItem.respawn_hr || 12, respawn_min: currentItem.respawn_min || 0, percent: currentItem.percent || "100%", next_spawn: "-", notified: false });
+                promises.push(p); count++;
             }
-            
-            if (count > 0) {
-                Promise.all(promises).then(() => {
-                    alert(`🔮 ทำสำเนาบอสทั้งหมด ${count} ตัว ไปที่ช่องพิเศษ [${newPrefix}] เรียบร้อยครับ!`);
-                    closePrefixModal();
-                }).catch((err) => {
-                    alert("เกิดข้อผิดพลาด: " + err.message);
-                });
-            } else {
-                alert("❌ ไม่พบข้อมูลบอสในตารางที่จะนำมาคัดลอกครับ");
-            }
+            if (count > 0) { Promise.all(promises).then(() => { alert(`🔮 คัดลอกไปช่องพิเศษสำเร็จ!`); closePrefixModal(); }); }
         }
 
         function openKillModal() {
-            if (!selectedBossKey) return alert("กรุณาคลิกเลือกชื่อบอสในตารางก่อนกดปุ่มครับ");
-            let data = bossData[selectedBossKey];
-            let prefixStr = data.prefix ? `[${data.prefix}] ` : "";
-            let fullDisplay = prefixStr + (data.boss_name || selectedBossKey);
-
-            let now = new Date();
-            const pad = (n) => String(n).padStart(2, '0');
-            let nowStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-            
-            document.getElementById("killModalTitle").innerText = `บันทึกเวลาตาย: ${fullDisplay}`;
-            document.getElementById("modalKillInput").value = nowStr;
+            if (!selectedBossKey) return alert("กรุณาคลิกเลือกชื่อบอสก่อนครับ");
+            let data = bossData[selectedBossKey]; let now = new Date(); const pad = (n) => String(n).padStart(2, '0');
+            document.getElementById("killModalTitle").innerText = `บันทึกเวลาตาย: ${(data.prefix ? '['+data.prefix+'] ' : '') + (data.boss_name || selectedBossKey)}`;
+            document.getElementById("modalKillInput").value = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
             document.getElementById("killModal").classList.remove("hidden");
         }
-        function closeKillModal() {
-            document.getElementById("killModal").classList.add("hidden");
-        }
+        function closeKillModal() { document.getElementById("killModal").classList.add("hidden"); }
         function submitBossKilled() {
-            let newKillStr = document.getElementById("modalKillInput").value.trim();
-            if (!newKillStr) return;
-            let data = bossData[selectedBossKey];
-            if (!data) return;
-
+            let newKillStr = document.getElementById("modalKillInput").value.trim(); if (!newKillStr) return;
+            let data = bossData[selectedBossKey]; if (!data) return;
             try {
-                let parts = newKillStr.split(" ");
-                let dParts = parts[0].split("/");
-                let tParts = parts[1].split(":");
-                let lkDt = new Date(dParts[2], dParts[1]-1, dParts[0], tParts[0], tParts[1]);
-
-                if (isNaN(lkDt)) throw new Error();
-
-                let nsDt = new Date(lkDt.getTime());
-                nsDt.setHours(nsDt.getHours() + parseInt(data.respawn_hr || 12));
-                nsDt.setMinutes(nsDt.getMinutes() + parseInt(data.respawn_min || 0));
-
+                let parts = newKillStr.split(" "); let dParts = parts[0].split("/"); let tParts = parts[1].split(":");
+                let lkDt = new Date(dParts[2], dParts[1]-1, dParts[0], tParts[0], tParts[1]); if (isNaN(lkDt)) throw new Error();
+                let nsDt = new Date(lkDt.getTime()); nsDt.setHours(nsDt.getHours() + parseInt(data.respawn_hr || 12)); nsDt.setMinutes(nsDt.getMinutes() + parseInt(data.respawn_min || 0));
                 const pad = (n) => String(n).padStart(2, '0');
-                let nextSpawnStr = `${pad(nsDt.getDate())}/${pad(nsDt.getMonth()+1)}/${nsDt.getFullYear()} ${pad(nsDt.getHours())}:${pad(nsDt.getMinutes())}`;
-
-                db.ref(selectedBossKey).update({
-                    last_kill: `${pad(lkDt.getDate())}/${pad(lkDt.getMonth()+1)}/${lkDt.getFullYear()} ${pad(lkDt.getHours())}:${pad(lkDt.getMinutes())}`,
-                    next_spawn: nextSpawnStr,
-                    notified: false
-                }).then(() => {
-                    closeKillModal();
-                    selectedBossKey = null;
-                });
-            } catch (e) {
-                alert("รูปแบบเวลาไม่ถูกต้อง กรุณาพิมพ์ในฟอร์แมต DD/MM/YYYY HH:MM");
-            }
+                db.ref(selectedBossKey).update({ last_kill: `${pad(lkDt.getDate())}/${pad(lkDt.getMonth()+1)}/${lkDt.getFullYear()} ${pad(lkDt.getHours())}:${pad(lkDt.getMinutes())}`, next_spawn: `${pad(nsDt.getDate())}/${pad(nsDt.getMonth()+1)}/${nsDt.getFullYear()} ${pad(nsDt.getHours())}:${pad(nsDt.getMinutes())}`, notified: false }).then(() => { closeKillModal(); selectedBossKey = null; });
+            } catch (e) { alert("รูปแบบเวลาไม่ถูกต้อง"); }
         }
 
         function deleteBoss() {
-            if (!selectedBossKey) return alert("กรุณาคลิกเลือกชื่อบอสในตารางก่อนครับ");
-            let data = bossData[selectedBossKey];
-            let prefixStr = data.prefix ? `[${data.prefix}] ` : "";
-            let fullDisplay = prefixStr + (data.boss_name || selectedBossKey);
-
-            if (confirm(`ต้องการลบบอส [${fullDisplay}] ?`)) {
-                db.ref(selectedBossKey).remove();
-                selectedBossKey = null;
-            }
+            if (!selectedBossKey) return alert("กรุณาเลือกบอสก่อนครับ");
+            if (confirm(`ต้องการลบบอสตัวที่เลือก?`)) { db.ref(selectedBossKey).remove(); selectedBossKey = null; }
         }
-
-        // นำฟังก์ชันนี้ออกจากการผูกกับปุ่มล้างทั้งหมด เพื่อความปลอดภัย แต่ยังคงโครงสร้างลบเฉพาะบอสข้ามเซิฟไว้ใช้งานได้ปกติครับ
         function deleteAllSpecialBosses() {
-            let count = 0;
-            for (let key in bossData) {
-                if (bossData[key] && bossData[key].prefix) {
-                    db.ref(key).remove();
-                    count++;
-                }
-            }
-            if (count === 0) alert("ไม่พบข้อมูลบอสพิเศษในระบบให้ลบครับ");
+            for (let key in bossData) { if (bossData[key] && bossData[key].prefix) db.ref(key).remove(); }
         }
 
-        // ================= ฟังก์ชันแกนระบบตรวจสอบเวลาลูปคูลดาวน์คู่ขนาน Real-time =================
+        function triggerDoubleChime() {
+            try {
+                let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                let playTone = (freq, startDelay, duration) => {
+                    setTimeout(() => {
+                        let osc = audioCtx.createOscillator(); let gainNode = audioCtx.createGain();
+                        osc.type = 'sine'; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                        gainNode.gain.setValueAtTime(0.01, audioCtx.currentTime);
+                        gainNode.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.05);
+                        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                        osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+                        osc.start(); osc.stop(audioCtx.currentTime + duration);
+                    }, startDelay);
+                };
+
+                playTone(523.25, 0, 0.6);   
+                playTone(659.25, 120, 0.6); 
+                playTone(783.99, 240, 0.6); 
+                playTone(987.77, 360, 0.8); 
+
+                let secondRoundDelay = 1500;
+                playTone(523.25, secondRoundDelay + 0, 0.6);
+                playTone(659.25, secondRoundDelay + 120, 0.6);
+                playTone(783.99, secondRoundDelay + 240, 0.6);
+                playTone(987.77, secondRoundDelay + 360, 0.8);
+            } catch (e) { console.log(e); }
+        }
+
         function checkAlarms() {
-            const now = new Date();
-            const pad = (n) => String(n).padStart(2, '0');
-
+            const now = new Date(); const pad = (n) => String(n).padStart(2, '0');
             for (let key in bossData) {
-                let data = bossData[key];
-                if (!data) continue;
-                let nsStr = data.next_spawn || "-";
-                if (nsStr === "-") continue;
-
-                let parts = nsStr.split(" ");
-                if (parts.length < 2) continue;
-                let dParts = parts[0].split("/");
-                let tParts = parts[1].split(":");
+                let data = bossData[key]; if (!data) continue;
+                let nsStr = data.next_spawn || "-"; if (nsStr === "-") continue;
+                let parts = nsStr.split(" "); if (parts.length < 2) continue;
+                let dParts = parts[0].split("/"); let tParts = parts[1].split(":");
                 let nsDt = new Date(dParts[2], dParts[1]-1, dParts[0], tParts[0], tParts[1]);
-
-                // 🔮 1. ปรับปรุงลอจิก: ตั้งเวลาให้ส่งเสียงเตือนล่วงหน้า 2 นาทีก่อนบอสเกิดจริง 🔮
+                
                 let notifyAdvanceTime = new Date(nsDt.getTime() - (2 * 60 * 1000)); 
 
                 if (now >= notifyAdvanceTime && !data.notified) {
                     db.ref(key).update({ notified: true });
-                    
-                    try {
-                        let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                        let playTone = (freq, startDelay, duration) => {
-                            setTimeout(() => {
-                                let osc = audioCtx.createOscillator();
-                                let gainNode = audioCtx.createGain();
-                                osc.type = 'sine';
-                                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-                                gainNode.gain.setValueAtTime(0.01, audioCtx.currentTime);
-                                gainNode.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.05);
-                                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-                                osc.connect(gainNode); gainNode.connect(audioCtx.destination);
-                                osc.start(); osc.stop(audioCtx.currentTime + duration);
-                            }, startDelay);
-                        };
-                        
-                        // บรรเลงคอร์ดเสียงกระดิ่งดนตรีพาสเทล Major 7th นุ่มหวานใส
-                        playTone(523.25, 0, 0.6);   
-                        playTone(659.25, 120, 0.6); 
-                        playTone(783.99, 240, 0.6); 
-                        playTone(987.77, 360, 0.8); 
-                    } catch (e) { console.log(e); }
+                    triggerDoubleChime(); 
                 }
 
-                // 2. ลอจิกล้างขยับรอบออโต้เมื่อบอสปล่อยเลทไปแล้ว 1 นาที 30 วินาที
                 let thresholdDt = new Date(nsDt.getTime() + (1 * 60 * 1000) + (30 * 1000));
                 if (now >= thresholdDt) {
-                    let pctVal = 100;
-                    try { pctVal = parseInt(data.percent.replace("%", "")) || 100; } catch(e){}
-
-                    let newLastKillDt = new Date();
-                    let newSpawnDt = new Date();
-
-                    if (pctVal === 100) {
-                        newLastKillDt = thresholdDt; 
-                        newSpawnDt = new Date(newLastKillDt.getTime());
-                        newSpawnDt.setHours(newSpawnDt.getHours() + parseInt(data.respawn_hr || 12));
-                        newSpawnDt.setMinutes(newSpawnDt.getMinutes() + parseInt(data.respawn_min || 0));
-                    } else {
-                        newLastKillDt = nsDt;
-                        newSpawnDt = new Date(newLastKillDt.getTime());
-                        newSpawnDt.setHours(newSpawnDt.getHours() + parseInt(data.respawn_hr || 12));
-                        newSpawnDt.setMinutes(newSpawnDt.getMinutes() + parseInt(data.respawn_min || 0));
-                    }
-
-                    let lkStr = `${pad(newLastKillDt.getDate())}/${pad(newLastKillDt.getMonth()+1)}/${newLastKillDt.getFullYear()} ${pad(newLastKillDt.getHours())}:${pad(newLastKillDt.getMinutes())}`;
-                    let nsStrNew = `${pad(newSpawnDt.getDate())}/${pad(newSpawnDt.getMonth()+1)}/${newSpawnDt.getFullYear()} ${pad(newSpawnDt.getHours())}:${pad(newSpawnDt.getMinutes())}`;
-
-                    db.ref(key).update({
-                        last_kill: lkStr,
-                        next_spawn: nsStrNew,
-                        notified: false
+                    let pctVal = 100; try { pctVal = parseInt(data.percent.replace("%", "")) || 100; } catch(e){}
+                    let newLastKillDt = pctVal === 100 ? thresholdDt : nsDt;
+                    let newSpawnDt = new Date(newLastKillDt.getTime());
+                    newSpawnDt.setHours(newSpawnDt.getHours() + parseInt(data.respawn_hr || 12));
+                    newSpawnDt.setMinutes(newSpawnDt.getMinutes() + parseInt(data.respawn_min || 0));
+                    
+                    db.ref(key).update({ 
+                        last_kill: `${pad(newLastKillDt.getDate())}/${pad(newLastKillDt.getMonth()+1)}/${newLastKillDt.getFullYear()} ${pad(newLastKillDt.getHours())}:${pad(newLastKillDt.getMinutes())}`, 
+                        next_spawn: `${pad(newSpawnDt.getDate())}/${pad(newSpawnDt.getMonth()+1)}/${newSpawnDt.getFullYear()} ${pad(newSpawnDt.getHours())}:${pad(newSpawnDt.getMinutes())}`, 
+                        notified: false 
                     });
                 }
             }
         }
-        
-        setInterval(() => {
-            checkAlarms();
-            updateTable();
+
+        // ฟังก์ชันสำหรับดึงเวลาปัจจุบันมาอัปเดตลงบอร์ดแบบ Real-time
+        function updateClock() {
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            
+            const day = pad(now.getDate());
+            const month = pad(now.getMonth() + 1);
+            const year = now.getFullYear();
+            
+            const hours = pad(now.getHours());
+            const minutes = pad(now.getMinutes());
+            const seconds = pad(now.getSeconds());
+            
+            const clockLabel = document.getElementById("clockLabel");
+            if (clockLabel) {
+                clockLabel.innerText = `เวลาปัจจุบัน: ${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+            }
+        }
+
+        // เรียกใช้นาฬิกาทันทีเมื่อเข้าเว็บ
+        updateClock();
+
+        // รันลูปเช็คระบบการแจ้งเตือนบอส ตารางเวลา และเวลาปัจจุบันไปพร้อมกันทุกๆ 1 วินาที
+        setInterval(() => { 
+            checkAlarms(); 
+            updateTable(); 
+            updateClock();
         }, 1000);
     </script>
 </body>
