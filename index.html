@@ -620,7 +620,7 @@
         }
 
         function getCountdownFormat(ms) {
-            if (ms <= 0) return "🔥 เกิดแล้ว!";
+            if (ms <= 0) return "🔥 ยังไม่ได้ติ๊ก";
             let total_sec = Math.floor(ms / 1000);
             let hours = Math.floor(total_sec / 3600);
             let remainder = total_sec % 3600;
@@ -666,7 +666,9 @@
                 let statusText = "", rowTagClass = "", nsDisplay = "-";
                 if (item.nsDt) {
                     nsDisplay = `${String(item.nsDt.getDate()).padStart(2, '0')}/${String(item.nsDt.getMonth()+1).padStart(2, '0')} ${String(item.nsDt.getHours()).padStart(2, '0')}:${String(item.nsDt.getMinutes()).padStart(2, '0')}`;
-                    statusText = now >= item.nsDt ? `🔥 เกิดแล้ว! (เลท ${Math.floor((now - item.nsDt) / 60000)} น.)` : `⏳ อีก ${getCountdownFormat(item.nsDt - now)}`;
+                    
+                    // แสดงข้อความ "🔥 ยังไม่ได้ติ๊ก" เมื่อถึงหรือเลยเวลาเกิดบอส
+                    statusText = now >= item.nsDt ? `🔥 ยังไม่ได้ติ๊ก` : `⏳ อีก ${getCountdownFormat(item.nsDt - now)}`;
                     rowTagClass = "text-black font-bold bg-red-100"; 
                 } else { statusText = "📝 รอข้อมูล"; rowTagClass = "text-black font-bold bg-gray-100"; }
                 let isSelected = selectedBossKey === item.fbKey ? 'selected-row' : '';
@@ -826,7 +828,7 @@
                     triggerChime(); // ส่งสัญญาณเตือน
                 }
 
-                // 2. เงื่อนไขรีเซ็ตบวกรอบใหม่อัตโนมัติเมื่อปล่อยเลทครบ 5 นาทีเต็ม
+                // 2. เงื่อนไขรีเซ็ตบวกรอบใหม่อัตโนมัติเมื่อปล่อยเลทครบ 5 นาทีเต็ม (แยกขาดจากการเช็กแจ้งเตือน)
                 let thresholdDt = new Date(nsDt.getTime() + (5 * 60 * 1000));
                 if (now >= thresholdDt) {
                     let pctVal = 100; try { pctVal = parseInt(data.percent.replace("%", "")) || 100; } catch(e){}
