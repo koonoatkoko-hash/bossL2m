@@ -33,9 +33,9 @@
         .hour-21 { background-color: #D1C4E9 !important; color: #000000 !important; } 
         .hour-22 { background-color: #FFCCBC !important; color: #000000 !important; } 
         .hour-23 { background-color: #CFD8DC !important; color: #000000 !important; } 
-        
+         
         .selected-row { background-color: #1565C0 !important; color: white !important; }
-        
+         
         /* สไตล์สำหรับโซนลากวางสลับฝั่ง ซ้าย-ขวา */
         .drag-zone { min-height: 120px; transition: all 0.2s ease; width: 100%; }
         .drag-over { border: 3px dashed #3b82f6 !important; background-color: #eff6ff !important; rounded-radius: 0.5rem; }
@@ -44,12 +44,11 @@
 </head>
 <body class="bg-gray-100 font-sans p-4">
 
-    <!-- ================= 🔒 หน้าจอระบบล็อกอิน / สมัครสมาชิก / ลืมรหัสผ่าน 🔒 ================= -->
     <div id="loginScreen" class="fixed inset-0 bg-gray-900 flex items-center justify-center z-50">
         <div class="bg-white p-6 rounded-lg shadow-xl w-96 text-center">
             <h2 id="authTitle" class="text-xl font-bold text-gray-800 mb-2">🔒 เข้าสู่ระบบ Boss Tracker</h2>
             <p id="authDesc" class="text-xs text-gray-500 mb-4">กรุณากรอกชื่อและรหัสผ่านเพื่อเข้าใช้งาน</p>
-            
+             
             <div class="space-y-3 mb-4 text-left">
                 <div>
                     <label class="text-xs font-bold text-gray-600 block mb-1">ชื่อผู้ใช้ (Username):</label>
@@ -85,9 +84,8 @@
         </div>
     </div>
 
-    <!-- ================= 💻 ส่วนเนื้อหาหลักเมื่อล็อกอินสำเร็จ 💻 ================= -->
     <div id="mainContent" class="max-w-[1600px] mx-auto hidden">
-        
+         
         <div class="text-center my-2 flex justify-between items-center bg-white p-3 rounded-lg shadow mb-4">
             <div class="text-xs font-bold text-blue-800 bg-blue-50 px-3 py-1.5 rounded border border-blue-200 flex items-center gap-1">
                 <span>ผู้ใช้งาน:</span> <span id="displayCurrentUser">-</span>
@@ -100,7 +98,6 @@
             </div>
         </div>
 
-        <!-- 👑 แผงควบคุมแอดมิน -->
         <div id="adminPanel" class="bg-purple-50 p-4 rounded-lg shadow border-2 border-purple-300 mb-4 hidden">
             <div class="flex justify-between items-center mb-2">
                 <h3 class="text-sm font-bold text-purple-900">👑 ระบบจัดการสมาชิกและการแก้ไข (สำหรับแอดมิน)</h3>
@@ -108,11 +105,11 @@
                     👁️ แสดงรายชื่อสมาชิกทั้งหมด
                 </button>
             </div>
-            
+             
             <div id="adminUsersZone" class="hidden border-t border-purple-200 pt-3">
                 <p class="text-xs text-gray-600 mb-2">รายชื่อคำขอและสมาชิก (คลิกเลือกชื่อเพื่อจัดการสิทธิ์รายคน):</p>
                 <div class="flex flex-wrap gap-2 mb-3" id="adminUserList"></div>
-                
+                 
                 <div class="flex flex-wrap items-center gap-2 bg-white p-3 rounded border border-purple-200 text-xs">
                     <div class="w-full md:w-auto font-bold text-gray-700 mr-2 mb-2 md:mb-0">
                         ยูสเซอร์ที่เลือก: <span id="selectedAdminUser" class="text-purple-700 underline">-</span>
@@ -129,7 +126,6 @@
             </div>
         </div>
 
-        <!-- 🛠️ ส่วนที่ 1: ตั้งค่าโปรไฟล์บอส -->
         <div id="bossInputArea" class="bg-white p-4 rounded-lg shadow-md mb-4 border border-gray-200 hidden">
             <h2 class="text-md font-bold text-blue-700 mb-3">🛠️ 1. ตั้งค่าบอสและเวลาเกิดใหม่ (ดับเบิลคลิกแถวในตารางเพื่อดึงมาแก้ไข)</h2>
             <div class="grid grid-cols-1 md:grid-cols-7 gap-3 items-end">
@@ -163,15 +159,12 @@
             </div>
         </div>
 
-        <!-- 🔍 ส่วนที่ 2: ค้นหาชื่อบอส และ 🔊 แผงตั้งค่าระบบเสียงแจ้งเตือนชุดใหม่ -->
         <div class="bg-white p-3 rounded-lg shadow-md mb-4 border border-gray-200 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <!-- ค้นหา -->
             <div class="flex items-center space-x-2 shrink-0">
                 <span class="text-sm font-bold text-green-800">🔍 ค้นหาบอส:</span>
                 <input type="text" id="entrySearch" oninput="updateTable()" class="rounded border border-gray-300 p-1.5 text-sm w-44" placeholder="พิมพ์ชื่อเพื่อค้นหา...">
             </div>
 
-            <!-- ระบบตั้งค่าเสียงและการเตือนล่วงหน้า -->
             <div class="flex flex-wrap items-center gap-4 bg-slate-50 p-2 rounded-md border border-slate-200 text-xs font-bold text-slate-700">
                 <div class="flex items-center space-x-1">
                     <span>⏱️ เตือนก่อนบอสเกิด:</span>
@@ -212,7 +205,6 @@
                 </button>
             </div>
 
-            <!-- โหมดแอดมิน / ดูอย่างเดียว -->
             <div id="bossActionButtons" class="flex items-center space-x-2 flex-wrap gap-2 hidden">
                 <button onclick="openKillModal()" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 text-sm rounded shadow">✔️ กดบันทักเวลาบอสตายล่าสุด (บันทึกเวลาปัจจุบัน)</button>
                 <button onclick="deleteBoss()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-3 py-2 text-xs rounded shadow">🗑️ ลบบอสที่เลือก</button>
@@ -221,13 +213,10 @@
             <div id="viewerAlertText" class="text-xs font-bold text-gray-500 hidden bg-gray-50 px-3 py-2 rounded border border-gray-200">👁️ คุณอยู่ในโหมด "ดูได้อย่างเดียว"</div>
         </div>
 
-        <!-- ================= 🏗️ ส่วนที่ 3: บอร์ดตารางซ้าย-ขวา ================= -->
         <div id="boardContainer" class="flex flex-col lg:flex-row gap-4 w-full items-start">
-            
-            <!-- โซนรับฝั่งซ้าย -->
+             
             <div id="zone-left" class="drag-zone flex flex-col gap-4 p-1 border-2 border-transparent border-dashed hover:border-gray-300 rounded-lg lg:flex-1">
-                
-                <!-- ตารางเตรียมตัวล่า -->
+                 
                 <div id="card-alert" draggable="true" class="w-full bg-white p-3 rounded-lg shadow border border-gray-200">
                     <div class="drag-handle flex justify-between items-center border-b pb-2 mb-2 bg-red-50 p-1 rounded">
                         <h3 class="text-md font-bold text-red-700">🚨 เตรียมตัวล่า! (เกิดแล้ว หรือเหลืออีกไม่เกิน 5 นาที)</h3>
@@ -251,10 +240,8 @@
 
             </div>
 
-            <!-- โซนรับฝั่งขวา -->
             <div id="zone-right" class="drag-zone flex flex-col gap-4 p-1 border-2 border-transparent border-dashed hover:border-gray-300 rounded-lg lg:flex-1">
-                
-                <!-- ตารางคูลดาวน์รวม -->
+                 
                 <div id="card-cooldown" draggable="true" class="w-full bg-white p-3 rounded-lg shadow border border-gray-200">
                     <div class="drag-handle flex justify-between items-center border-b pb-2 mb-2 bg-green-50 p-1 rounded">
                         <h3 class="text-md font-bold text-green-700">⏳ บอสกำลังคูลดาวน์รวม (เกิน 5 นาที แยกกลุ่มสีตามรายชั่วโมง)</h3>
@@ -281,7 +268,6 @@
         </div>
     </div>
 
-    <!-- ป๊อปอัปบอสข้ามเซิฟ -->
     <div id="prefixModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-5 rounded-lg shadow-lg w-96">
             <h3 class="text-md font-bold text-purple-800 mb-3">ก๊อปปี้บอสไปช่องพิเศษ</h3>
@@ -294,7 +280,6 @@
         </div>
     </div>
 
-    <!-- ป๊อปอัปเวลาบอสตาย -->
     <div id="killModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-5 rounded-lg shadow-lg w-96">
             <h3 class="text-md font-bold text-green-800 mb-2" id="killModalTitle">บันทึกเวลาบอสตาย</h3>
@@ -834,15 +819,15 @@
                 let dParts = parts[0].split("/"); let tParts = parts[1].split(":");
                 let nsDt = new Date(dParts[2], dParts[1]-1, dParts[0], tParts[0], tParts[1]);
                 
-                // คำนวณเวลาแจ้งเตือนล่วงหน้าตามที่ผู้ใช้เลือกจริง
+                // 1. เงื่อนไขสำหรับการแจ้งเตือนล่วงหน้า (ทำงานก่อนบอสเกิดจริงเท่านั้น)
                 let notifyAdvanceTime = new Date(nsDt.getTime() - (advanceMinutes * 60 * 1000)); 
-
-                if (now >= notifyAdvanceTime && !data.notified) {
+                if (now >= notifyAdvanceTime && now < nsDt && !data.notified) {
                     db.ref(key).update({ notified: true });
                     triggerChime(); // ส่งสัญญาณเตือน
                 }
 
-                let thresholdDt = new Date(nsDt.getTime() + (1 * 60 * 1000) + (30 * 1000));
+                // 2. เงื่อนไขรีเซ็ตบวกรอบใหม่อัตโนมัติเมื่อปล่อยเลทครบ 5 นาทีเต็ม
+                let thresholdDt = new Date(nsDt.getTime() + (5 * 60 * 1000));
                 if (now >= thresholdDt) {
                     let pctVal = 100; try { pctVal = parseInt(data.percent.replace("%", "")) || 100; } catch(e){}
                     let newLastKillDt = pctVal === 100 ? thresholdDt : nsDt;
