@@ -200,6 +200,12 @@
                     <span id="volLabel" class="w-7 inline-block text-slate-500">50%</span>
                 </div>
 
+                <div class="flex items-center space-x-2 border-l border-slate-300 pl-4">
+                    <span>📐 ขนาดปุ่มจัดการด่วน:</span>
+                    <input type="range" id="cfgBtnSize" min="11" max="22" value="13" class="w-24 accent-purple-600 h-1.5 bg-gray-200 rounded-lg cursor-pointer">
+                    <span id="btnSizeLabel" class="w-10 inline-block text-slate-500">13px</span>
+                </div>
+
                 <button onclick="triggerChime(true)" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded shadow text-xs transition">
                     🔊 ทดสอบเสียง
                 </button>
@@ -231,7 +237,7 @@
                                     <th class="p-2 border border-gray-300">เวลาเกิดรอบถัดไป</th>
                                     <th class="p-2 border border-gray-300">โอกาสเกิด</th>
                                     <th class="p-2 border border-gray-300">นับถอยหลัง</th>
-                                    <th class="p-2 border border-gray-300 w-32">จัดการด่วน</th>
+                                    <th class="p-2 border border-gray-300 w-36">จัดการด่วน</th>
                                 </tr>
                             </thead>
                             <tbody id="treeLeft"></tbody>
@@ -513,6 +519,9 @@
             });
 
             loadUserLayout();
+            
+            // โหลดระบบตัวช่วยจัดการขนาดปุ่มหลังเข้าสู่ระบบสำเร็จ
+            initBtnSizeTracker();
         }
 
         function toggleUserListDisplay() {
@@ -675,10 +684,19 @@
                 
                 let actionBtnHtml = "-";
                 if (currentUserRole === "admin" || currentUserRole === "editor") {
+                    // ใช้ CSS Variable (--btn-font-size และ --btn-padding) เพื่อปรับขนาดแบบไดนามิก
                     actionBtnHtml = `
-                        <div class="flex justify-center gap-1" onclick="event.stopPropagation();">
-                            <button onclick="quickKillBoss('${item.fbKey}')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-0.5 px-1.5 rounded text-[11px] shadow-sm">ตาย</button>
-                            <button onclick="quickSkipBoss('${item.fbKey}')" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-0.5 px-1.5 rounded text-[11px] shadow-sm">ไม่เกิด</button>
+                        <div class="flex justify-center gap-1.5 p-0.5" onclick="event.stopPropagation();">
+                            <button onclick="quickKillBoss('${item.fbKey}')" 
+                                    class="quick-action-btn bg-green-600 hover:bg-green-700 text-white font-bold rounded shadow-sm transform active:scale-95 transition-all"
+                                    style="font-size: var(--btn-font-size, 13px); padding: var(--btn-padding, 4px 8px);">
+                                 ตาย
+                            </button>
+                            <button onclick="quickSkipBoss('${item.fbKey}')" 
+                                    class="quick-action-btn bg-orange-500 hover:bg-orange-600 text-white font-bold rounded shadow-sm transform active:scale-95 transition-all"
+                                    style="font-size: var(--btn-font-size, 13px); padding: var(--btn-padding, 4px 8px);">
+                                 ไม่เกิด
+                            </button>
                         </div>
                     `;
                 }
@@ -752,7 +770,6 @@
             if (count > 0) { Promise.all(promises).then(() => { alert(`🔮 คัดลอกไปช่องพิเศษสำเร็จ!`); closePrefixModal(); }); }
         }
 
-        // 🌟 [แก้ไขใหม่] ปุ่มด่วน "💀 ตาย": บันทึกเวลาปัจจุบันเข้า Firebase ทันที โดยไม่ถามป๊อปอัป
         function quickKillBoss(fbKey) {
             let data = bossData[fbKey]; if (!data) return;
             let now = new Date(); const pad = (n) => String(n).padStart(2, '0');
@@ -771,12 +788,10 @@
             });
         }
 
-        // 🌟 [แก้ไขใหม่] ปุ่มด่วน "❌ ไม่เกิด": จับเวลาปัจจุบัน ณ ตอนกด แล้วบวกรอบเกิดใหม่เข้าตารางขวาทันที
         function quickSkipBoss(fbKey) {
             let data = bossData[fbKey]; if (!data) return;
             let now = new Date(); const pad = (n) => String(n).padStart(2, '0');
             
-            // ดับเวลาปัจจุบัน (now) มาเป็นฐานในการปัดรอบใหม่ทันที
             let lkDt = new Date(now.getTime());
             let nsDt = new Date(lkDt.getTime());
             nsDt.setHours(nsDt.getHours() + parseInt(data.respawn_hr || 12));
@@ -819,13 +834,11 @@
             for (let key in bossData) { if (bossData[key] && bossData[key].prefix) db.ref(key).remove(); }
         }
 
-        // ฟังก์ชันส่งสัญญาณเสียงแจ้งเตือนชุดใหม่ รองรับการตั้ง Volume และตั้งจำนวนรอบ (Loop)
         function triggerChime(isTest = false) {
             try {
-                // ดึงค่าการตั้งค่าจากหน้าเว็บมาคำนวณระดับเสียงและจำนวนครั้ง
                 const volSliderVal = parseInt(document.getElementById("cfgVolume").value) || 0;
                 const totalLoops = parseInt(document.getElementById("cfgNotifyLoop").value) || 1;
-                const gainVolume = volSliderVal / 100 * 0.15; // คุมไม่ให้ดังพีคเกินไป
+                const gainVolume = volSliderVal / 100 * 0.15;
 
                 let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 
@@ -847,7 +860,6 @@
                     }, startDelay);
                 };
 
-                // วนลูปตามจำนวนครั้งที่ตั้งค่าไว้ (แต่ละรอบห่างกันรอบละ 1.4 วินาที)
                 for (let i = 0; i < totalLoops; i++) {
                     let baseDelay = i * 1400;
                     playTone(523.25, baseDelay + 0, 0.5);   
@@ -860,8 +872,6 @@
 
         function checkAlarms() {
             const now = new Date(); const pad = (n) => String(n).padStart(2, '0');
-            
-            // ดึงจำนวนนาทีที่ต้องการให้แจ้งเตือนล่วงหน้ามาจาก Select Option
             const advanceMinutes = parseInt(document.getElementById("cfgNotifyAdvance").value) || 2;
 
             for (let key in bossData) {
@@ -871,14 +881,12 @@
                 let dParts = parts[0].split("/"); let tParts = parts[1].split(":");
                 let nsDt = new Date(dParts[2], dParts[1]-1, dParts[0], tParts[0], tParts[1]);
                 
-                // 1. เงื่อนไขสำหรับการแจ้งเตือนล่วงหน้า (ทำงานก่อนบอสเกิดจริงเท่านั้น)
                 let notifyAdvanceTime = new Date(nsDt.getTime() - (advanceMinutes * 60 * 1000)); 
                 if (now >= notifyAdvanceTime && now < nsDt && !data.notified) {
                     db.ref(key).update({ notified: true });
-                    triggerChime(); // ส่งสัญญาณเตือน
+                    triggerChime();
                 }
 
-                // 2. เงื่อนไขรีเซ็ตบวกรอบใหม่อัตโนมัติเมื่อปล่อยเลทครบ 5 นาทีเต็ม (แยกขาดจากการเช็กแจ้งเตือน)
                 let thresholdDt = new Date(nsDt.getTime() + (5 * 60 * 1000));
                 if (now >= thresholdDt) {
                     let pctVal = 100; try { pctVal = parseInt(data.percent.replace("%", "")) || 100; } catch(e){}
@@ -1010,6 +1018,38 @@
             const user = localStorage.getItem("currentBossUser") || "guest";
             localStorage.removeItem(`table_layout_${user}`);
             window.location.reload();
+        }
+
+        // ================= ระบบทำงานสไลเดอร์ปรับขนาดปุ่มจัดการด่วน =================
+        function initBtnSizeTracker() {
+            const btnSizeSlider = document.getElementById("cfgBtnSize");
+            const btnSizeLabel = document.getElementById("btnSizeLabel");
+
+            function applyButtonSize(size) {
+                const fontSize = size + "px";
+                // คำนวณ padding ให้ขยายสัดส่วนตามขนาดตัวอักษรโดยอัตโนมัติ
+                const padTopBottom = Math.max(2, Math.floor(size * 0.35)) + "px";
+                const padLeftRight = Math.floor(size * 0.75) + "px";
+                const padding = `${padTopBottom} ${padLeftRight}`;
+
+                document.documentElement.style.setProperty('--btn-font-size', fontSize);
+                document.documentElement.style.setProperty('--btn-padding', padding);
+                
+                if (btnSizeLabel) btnSizeLabel.innerText = fontSize;
+            }
+
+            if (btnSizeSlider) {
+                const savedUserKey = localStorage.getItem("currentBossUser") || "guest";
+                const savedSize = localStorage.getItem(`btn_size_${savedUserKey}`) || "13";
+                btnSizeSlider.value = savedSize;
+                applyButtonSize(savedSize);
+
+                btnSizeSlider.addEventListener("input", (e) => {
+                    const currentSize = e.target.value;
+                    applyButtonSize(currentSize);
+                    localStorage.setItem(`btn_size_${savedUserKey}`, currentSize);
+                });
+            }
         }
 
         updateClock();
