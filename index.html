@@ -231,6 +231,7 @@
                                     <th class="p-2 border border-gray-300">เวลาเกิดรอบถัดไป</th>
                                     <th class="p-2 border border-gray-300">โอกาสเกิด</th>
                                     <th class="p-2 border border-gray-300">นับถอยหลัง</th>
+                                    <th class="p-2 border border-gray-300 w-32">จัดการด่วน</th>
                                 </tr>
                             </thead>
                             <tbody id="treeLeft"></tbody>
@@ -666,13 +667,23 @@
                 let statusText = "", rowTagClass = "", nsDisplay = "-";
                 if (item.nsDt) {
                     nsDisplay = `${String(item.nsDt.getDate()).padStart(2, '0')}/${String(item.nsDt.getMonth()+1).padStart(2, '0')} ${String(item.nsDt.getHours()).padStart(2, '0')}:${String(item.nsDt.getMinutes()).padStart(2, '0')}`;
-                    
-                    // แสดงข้อความ "🔥 ยังไม่ได้ติ๊ก" เมื่อถึงหรือเลยเวลาเกิดบอส
                     statusText = now >= item.nsDt ? `🔥 ยังไม่ได้ติ๊ก` : `⏳ อีก ${getCountdownFormat(item.nsDt - now)}`;
                     rowTagClass = "text-black font-bold bg-red-100"; 
                 } else { statusText = "📝 รอข้อมูล"; rowTagClass = "text-black font-bold bg-gray-100"; }
+                
                 let isSelected = selectedBossKey === item.fbKey ? 'selected-row' : '';
-                treeLeft.innerHTML += `<tr class="${rowTagClass} ${isSelected} cursor-pointer hover:opacity-80 border-b border-gray-300 font-bold" ${rowActionAttr(item.fbKey)}><td class="p-2 border-r border-gray-300 text-left font-bold">${item.displayName}</td><td class="p-2 border-r border-gray-300 font-bold">${item.data.last_kill}</td><td class="p-2 border-r border-gray-300 font-bold">${nsDisplay}</td><td class="p-2 border-r border-gray-300 font-bold">${item.pct}</td><td class="p-2 font-bold">${statusText}</td></tr>`;
+                
+                let actionBtnHtml = "-";
+                if (currentUserRole === "admin" || currentUserRole === "editor") {
+                    actionBtnHtml = `
+                        <div class="flex justify-center gap-1" onclick="event.stopPropagation();">
+                            <button onclick="quickKillBoss('${item.fbKey}')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-0.5 px-1.5 rounded text-[11px] shadow-sm">💀 ตาย</button>
+                            <button onclick="quickSkipBoss('${item.fbKey}')" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-0.5 px-1.5 rounded text-[11px] shadow-sm">❌ ไม่เกิด</button>
+                        </div>
+                    `;
+                }
+
+                treeLeft.innerHTML += `<tr class="${rowTagClass} ${isSelected} cursor-pointer hover:opacity-80 border-b border-gray-300 font-bold" ${rowActionAttr(item.fbKey)}><td class="p-2 border-r border-gray-300 text-left font-bold">${item.displayName}</td><td class="p-2 border-r border-gray-300 font-bold">${item.data.last_kill}</td><td class="p-2 border-r border-gray-300 font-bold">${nsDisplay}</td><td class="p-2 border-r border-gray-300 font-bold">${item.pct}</td><td class="p-2 border-r border-gray-300 font-bold">${statusText}</td><td class="p-2 font-bold">${actionBtnHtml}</td></tr>`;
             });
 
             rightList.forEach(item => {
@@ -739,6 +750,45 @@
                 promises.push(p); count++;
             }
             if (count > 0) { Promise.all(promises).then(() => { alert(`🔮 คัดลอกไปช่องพิเศษสำเร็จ!`); closePrefixModal(); }); }
+        }
+
+        // 🌟 [แก้ไขใหม่] ปุ่มด่วน "💀 ตาย": บันทึกเวลาปัจจุบันเข้า Firebase ทันที โดยไม่ถามป๊อปอัป
+        function quickKillBoss(fbKey) {
+            let data = bossData[fbKey]; if (!data) return;
+            let now = new Date(); const pad = (n) => String(n).padStart(2, '0');
+            
+            let lkDt = new Date(now.getTime());
+            let nsDt = new Date(lkDt.getTime());
+            nsDt.setHours(nsDt.getHours() + parseInt(data.respawn_hr || 12));
+            nsDt.setMinutes(nsDt.getMinutes() + parseInt(data.respawn_min || 0));
+            
+            db.ref(fbKey).update({ 
+                last_kill: `${pad(lkDt.getDate())}/${pad(lkDt.getMonth()+1)}/${lkDt.getFullYear()} ${pad(lkDt.getHours())}:${pad(lkDt.getMinutes())}`, 
+                next_spawn: `${pad(nsDt.getDate())}/${pad(nsDt.getMonth()+1)}/${nsDt.getFullYear()} ${pad(nsDt.getHours())}:${pad(nsDt.getMinutes())}`, 
+                notified: false 
+            }).then(() => {
+                if (selectedBossKey === fbKey) selectedBossKey = null;
+            });
+        }
+
+        // 🌟 [แก้ไขใหม่] ปุ่มด่วน "❌ ไม่เกิด": จับเวลาปัจจุบัน ณ ตอนกด แล้วบวกรอบเกิดใหม่เข้าตารางขวาทันที
+        function quickSkipBoss(fbKey) {
+            let data = bossData[fbKey]; if (!data) return;
+            let now = new Date(); const pad = (n) => String(n).padStart(2, '0');
+            
+            // ดับเวลาปัจจุบัน (now) มาเป็นฐานในการปัดรอบใหม่ทันที
+            let lkDt = new Date(now.getTime());
+            let nsDt = new Date(lkDt.getTime());
+            nsDt.setHours(nsDt.getHours() + parseInt(data.respawn_hr || 12));
+            nsDt.setMinutes(nsDt.getMinutes() + parseInt(data.respawn_min || 0));
+            
+            db.ref(fbKey).update({ 
+                last_kill: `${pad(lkDt.getDate())}/${pad(lkDt.getMonth()+1)}/${lkDt.getFullYear()} ${pad(lkDt.getHours())}:${pad(lkDt.getMinutes())}`, 
+                next_spawn: `${pad(nsDt.getDate())}/${pad(nsDt.getMonth()+1)}/${nsDt.getFullYear()} ${pad(nsDt.getHours())}:${pad(nsDt.getMinutes())}`, 
+                notified: false 
+            }).then(() => {
+                if (selectedBossKey === fbKey) selectedBossKey = null;
+            });
         }
 
         function openKillModal() {
