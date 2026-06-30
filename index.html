@@ -790,15 +790,32 @@
 
         function quickSkipBoss(fbKey) {
             let data = bossData[fbKey]; if (!data) return;
-            let now = new Date(); const pad = (n) => String(n).padStart(2, '0');
+            const pad = (n) => String(n).padStart(2, '0');
             
-            let lkDt = new Date(now.getTime());
-            let nsDt = new Date(lkDt.getTime());
+            let baseDt = new Date(); // เผื่อกรณีไม่มีเวลาเดิม ให้ใช้เวลาปัจจุบันเซฟโซนไว้ก่อน
+            let nsStr = data.next_spawn || "-";
+            
+            // ตรวจสอบว่ามีเวลาเกิดรอบถัดไปเดิมอยู่ไหม ถ้ามีให้เอาเวลานั้นมาคำนวณต่อเลย
+            if (nsStr && nsStr !== "-") {
+                let parts = nsStr.split(" ");
+                if (parts.length >= 2) {
+                    let dParts = parts[0].split("/"); 
+                    let tParts = parts[1].split(":");
+                    let parsedDt = new Date(dParts[2], dParts[1]-1, dParts[0], tParts[0], tParts[1]);
+                    if (!isNaN(parsedDt)) {
+                        baseDt = parsedDt; // ใช้เวลาเกิดเดิมเป็นฐานในการบวกรอบถัดไป
+                    }
+                }
+            }
+            
+            // คำนวณเวลาเกิดรอบถัดไปใหม่ โดยบวกเพิ่มจากฐานเวลาเกิดรอบที่แล้ว
+            let nsDt = new Date(baseDt.getTime());
             nsDt.setHours(nsDt.getHours() + parseInt(data.respawn_hr || 12));
             nsDt.setMinutes(nsDt.getMinutes() + parseInt(data.respawn_min || 0));
             
+            // อัปเดตข้อมูลลง Firebase (last_kill จะกลายเป็นเวลาเกิดรอบที่เพิ่งข้ามไป ส่วน next_spawn จะเป็นรอบถัดไปจริงๆ)
             db.ref(fbKey).update({ 
-                last_kill: `${pad(lkDt.getDate())}/${pad(lkDt.getMonth()+1)}/${lkDt.getFullYear()} ${pad(lkDt.getHours())}:${pad(lkDt.getMinutes())}`, 
+                last_kill: `${pad(baseDt.getDate())}/${pad(baseDt.getMonth()+1)}/${baseDt.getFullYear()} ${pad(baseDt.getHours())}:${pad(baseDt.getMinutes())}`, 
                 next_spawn: `${pad(nsDt.getDate())}/${pad(nsDt.getMonth()+1)}/${nsDt.getFullYear()} ${pad(nsDt.getHours())}:${pad(nsDt.getMinutes())}`, 
                 notified: false 
             }).then(() => {
