@@ -8,7 +8,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <style>
-        /* ปรับปรุงพื้นหลังให้สลับเฉดสีไม่ซ้ำกัน และบังคับให้ตัวหนังสือในตารางเป็นสีดำเข้มทั้งหมด (!important) */
         .hour-00 { background-color: #FFEBEE !important; color: #000000 !important; } 
         .hour-01 { background-color: #E0F2F1 !important; color: #000000 !important; } 
         .hour-02 { background-color: #F3E5F5 !important; color: #000000 !important; } 
@@ -36,7 +35,6 @@
          
         .selected-row { background-color: #1565C0 !important; color: white !important; }
          
-        /* สไตล์สำหรับโซนลากวางสลับฝั่ง ซ้าย-ขวา */
         .drag-zone { min-height: 120px; transition: all 0.2s ease; width: 100%; }
         .drag-over { border: 3px dashed #3b82f6 !important; background-color: #eff6ff !important; rounded-radius: 0.5rem; }
         .drag-handle { cursor: move; }
@@ -313,7 +311,6 @@
         let currentUserRole = "viewer"; 
         let showUserList = false;
 
-        // จัดการ UI แถบเลื่อนปรับความดังเสียง
         const volumeSlider = document.getElementById("cfgVolume");
         const volumeLabel = document.getElementById("volLabel");
         if(volumeSlider && volumeLabel) {
@@ -519,8 +516,6 @@
             });
 
             loadUserLayout();
-            
-            // โหลดระบบตัวช่วยจัดการขนาดปุ่มหลังเข้าสู่ระบบสำเร็จ
             initBtnSizeTracker();
         }
 
@@ -684,7 +679,6 @@
                 
                 let actionBtnHtml = "-";
                 if (currentUserRole === "admin" || currentUserRole === "editor") {
-                    // ใช้ CSS Variable (--btn-font-size และ --btn-padding) เพื่อปรับขนาดแบบไดนามิก
                     actionBtnHtml = `
                         <div class="flex justify-center gap-1.5 p-0.5" onclick="event.stopPropagation();">
                             <button onclick="quickKillBoss('${item.fbKey}')" 
@@ -770,36 +764,78 @@
             if (count > 0) { Promise.all(promises).then(() => { alert(`🔮 คัดลอกไปช่องพิเศษสำเร็จ!`); closePrefixModal(); }); }
         }
 
+        // ================= ⚡ LOGIC ปุ่ม 'ตาย' ⚡ =================
         function quickKillBoss(fbKey) {
             let data = bossData[fbKey]; if (!data) return;
             let now = new Date(); const pad = (n) => String(n).padStart(2, '0');
             
-            let lkDt = new Date(now.getTime());
-            let nsDt = new Date(lkDt.getTime());
-            nsDt.setHours(nsDt.getHours() + parseInt(data.respawn_hr || 12));
-            nsDt.setMinutes(nsDt.getMinutes() + parseInt(data.respawn_min || 0));
+            let parts = data.next_spawn.split(" ");
+            let dParts = parts[0].split("/"); let tParts = parts[1].split(":");
+            let nsDt = new Date(dParts[2], dParts[1]-1, dParts[0], tParts[0], tParts[1]); // เวลาที่จะเกิดล่าสุด
+            
+            let baseCalculatedTime = new Date(); 
+            let isOver5Min = (now - nsDt) / 60000 > 5; 
+            let pctVal = 100;
+            try { pctVal = parseInt(data.percent.replace("%", "")) || 100; } catch(e){}
+
+            if (isOver5Min) {
+                if (pctVal === 100) {
+                    // [บอส 100% เกิน 5 นาที] -> ฐานคือ เวลาที่จะเกิดล่าสุด + 1 นาที
+                    baseCalculatedTime = new Date(nsDt.getTime() + (1 * 60 * 1000));
+                } else {
+                    // [บอสน้อยกว่า 100% เกิน 5 นาที] -> จับเวลาปัจจุบัน
+                    baseCalculatedTime = new Date(now.getTime());
+                }
+            } else {
+                baseCalculatedTime = new Date(now.getTime());
+            }
+
+            let nextSpawnDt = new Date(baseCalculatedTime.getTime());
+            nextSpawnDt.setHours(nextSpawnDt.getHours() + parseInt(data.respawn_hr || 12));
+            nextSpawnDt.setMinutes(nextSpawnDt.getMinutes() + parseInt(data.respawn_min || 0));
             
             db.ref(fbKey).update({ 
-                last_kill: `${pad(lkDt.getDate())}/${pad(lkDt.getMonth()+1)}/${lkDt.getFullYear()} ${pad(lkDt.getHours())}:${pad(lkDt.getMinutes())}`, 
-                next_spawn: `${pad(nsDt.getDate())}/${pad(nsDt.getMonth()+1)}/${nsDt.getFullYear()} ${pad(nsDt.getHours())}:${pad(nsDt.getMinutes())}`, 
+                last_kill: `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`, 
+                next_spawn: `${pad(nextSpawnDt.getDate())}/${pad(nextSpawnDt.getMonth()+1)}/${nextSpawnDt.getFullYear()} ${pad(nextSpawnDt.getHours())}:${pad(nextSpawnDt.getMinutes())}`, 
                 notified: false 
             }).then(() => {
                 if (selectedBossKey === fbKey) selectedBossKey = null;
             });
         }
 
+        // ================= ⚡ LOGIC ปุ่ม 'ไม่เกิด' ⚡ =================
         function quickSkipBoss(fbKey) {
             let data = bossData[fbKey]; if (!data) return;
             let now = new Date(); const pad = (n) => String(n).padStart(2, '0');
             
-            let lkDt = new Date(now.getTime());
-            let nsDt = new Date(lkDt.getTime());
-            nsDt.setHours(nsDt.getHours() + parseInt(data.respawn_hr || 12));
-            nsDt.setMinutes(nsDt.getMinutes() + parseInt(data.respawn_min || 0));
+            let parts = data.next_spawn.split(" ");
+            let dParts = parts[0].split("/"); let tParts = parts[1].split(":");
+            let nsDt = new Date(dParts[2], dParts[1]-1, dParts[0], tParts[0], tParts[1]); // เวลาที่จะเกิดล่าสุด
+            
+            let baseCalculatedTime = new Date();
+            let isOver5Min = (now - nsDt) / 60000 > 5;
+            let pctVal = 100;
+            try { pctVal = parseInt(data.percent.replace("%", "")) || 100; } catch(e){}
+
+            if (isOver5Min) {
+                if (pctVal === 100) {
+                    // [🔥 ปรับใหม่ตามเงื่อนไข บอส 100% เกิน 5 นาที] -> ปุ่มไม่เกิด ให้เอาเวลาที่จะเกิดล่าสุด + 1 นาที ด้วย
+                    baseCalculatedTime = new Date(nsDt.getTime() + (1 * 60 * 1000));
+                } else {
+                    // [บอสน้อยกว่า 100% เกิน 5 นาที] -> เอาเวลาที่จะเกิดล่าสุดเป็นฐานนับรอบต่อไป
+                    baseCalculatedTime = new Date(nsDt.getTime());
+                }
+            } else {
+                baseCalculatedTime = new Date(now.getTime());
+            }
+
+            let nextSpawnDt = new Date(baseCalculatedTime.getTime());
+            nextSpawnDt.setHours(nextSpawnDt.getHours() + parseInt(data.respawn_hr || 12));
+            nextSpawnDt.setMinutes(nextSpawnDt.getMinutes() + parseInt(data.respawn_min || 0));
             
             db.ref(fbKey).update({ 
-                last_kill: `${pad(lkDt.getDate())}/${pad(lkDt.getMonth()+1)}/${lkDt.getFullYear()} ${pad(lkDt.getHours())}:${pad(lkDt.getMinutes())}`, 
-                next_spawn: `${pad(nsDt.getDate())}/${pad(nsDt.getMonth()+1)}/${nsDt.getFullYear()} ${pad(nsDt.getHours())}:${pad(nsDt.getMinutes())}`, 
+                last_kill: `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`, 
+                next_spawn: `${pad(nextSpawnDt.getDate())}/${pad(nextSpawnDt.getMonth()+1)}/${nextSpawnDt.getFullYear()} ${pad(nextSpawnDt.getHours())}:${pad(nextSpawnDt.getMinutes())}`, 
                 notified: false 
             }).then(() => {
                 if (selectedBossKey === fbKey) selectedBossKey = null;
@@ -871,7 +907,7 @@
         }
 
         function checkAlarms() {
-            const now = new Date(); const pad = (n) => String(n).padStart(2, '0');
+            const now = new Date();
             const advanceMinutes = parseInt(document.getElementById("cfgNotifyAdvance").value) || 2;
 
             for (let key in bossData) {
@@ -886,21 +922,7 @@
                     db.ref(key).update({ notified: true });
                     triggerChime();
                 }
-
-                let thresholdDt = new Date(nsDt.getTime() + (5 * 60 * 1000));
-                if (now >= thresholdDt) {
-                    let pctVal = 100; try { pctVal = parseInt(data.percent.replace("%", "")) || 100; } catch(e){}
-                    let newLastKillDt = pctVal === 100 ? thresholdDt : nsDt;
-                    let newSpawnDt = new Date(newLastKillDt.getTime());
-                    newSpawnDt.setHours(newSpawnDt.getHours() + parseInt(data.respawn_hr || 12));
-                    newSpawnDt.setMinutes(newSpawnDt.getMinutes() + parseInt(data.respawn_min || 0));
-                    
-                    db.ref(key).update({ 
-                        last_kill: `${pad(newLastKillDt.getDate())}/${pad(newLastKillDt.getMonth()+1)}/${newLastKillDt.getFullYear()} ${pad(newLastKillDt.getHours())}:${pad(newLastKillDt.getMinutes())}`, 
-                        next_spawn: `${pad(newSpawnDt.getDate())}/${pad(newSpawnDt.getMonth()+1)}/${newSpawnDt.getFullYear()} ${pad(newSpawnDt.getHours())}:${pad(newSpawnDt.getMinutes())}`, 
-                        notified: false 
-                    });
-                }
+                // ตัดคำสั่ง Force Reset อัตโนมัติออกถาวร เพื่อให้หน้าจอค้าง "ยังไม่ได้ติ๊ก" เสมอ
             }
         }
 
@@ -920,7 +942,6 @@
             }
         }
 
-        // ================= 🏗️ ฟังก์ชันระบบ Drag and Drop =================
         const cards = document.querySelectorAll('[draggable="true"]');
         const zones = document.querySelectorAll('.drag-zone');
 
@@ -1020,14 +1041,12 @@
             window.location.reload();
         }
 
-        // ================= ระบบทำงานสไลเดอร์ปรับขนาดปุ่มจัดการด่วน =================
         function initBtnSizeTracker() {
             const btnSizeSlider = document.getElementById("cfgBtnSize");
             const btnSizeLabel = document.getElementById("btnSizeLabel");
 
             function applyButtonSize(size) {
                 const fontSize = size + "px";
-                // คำนวณ padding ให้ขยายสัดส่วนตามขนาดตัวอักษรโดยอัตโนมัติ
                 const padTopBottom = Math.max(2, Math.floor(size * 0.35)) + "px";
                 const padLeftRight = Math.floor(size * 0.75) + "px";
                 const padding = `${padTopBottom} ${padLeftRight}`;
