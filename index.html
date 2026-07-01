@@ -215,6 +215,9 @@
                 <button onclick="openKillModal()" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 text-sm rounded shadow">✔️ กดบันทักเวลาบอสตายล่าสุด (บันทึกเวลาปัจจุบัน)</button>
                 <button onclick="deleteBoss()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-3 py-2 text-xs rounded shadow">🗑️ ลบบอสที่เลือก</button>
                 <button onclick="deleteAllSpecialBosses()" class="bg-purple-900 hover:bg-purple-950 text-white font-bold px-3 py-2 text-xs rounded shadow"> ลบบอสข้ามเซิฟ(ลบทั้งหมด)</button>
+                
+                <button onclick="clearAllBossTimes()" class="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-2 text-xs rounded shadow">🛑 รีเซ็ตลบเวลาบอสทั้งหมด</button>
+                <button id="btnUndoClearTime" onclick="undoClearBossTimes()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-3 py-2 text-xs rounded shadow hidden">↩️ ย้อนกลับ (กู้คืนเวลาเดิม)</button>
             </div>
             <div id="viewerAlertText" class="text-xs font-bold text-gray-500 hidden bg-gray-50 px-3 py-2 rounded border border-gray-200">👁️ คุณอยู่ในโหมด "ดูได้อย่างเดียว"</div>
         </div>
@@ -312,6 +315,9 @@
         let adminSelectedUser = null;
         let currentUserRole = "viewer"; 
         let showUserList = false;
+        
+        // ตัวแปรสำหรับเก็บค่าเวลาเดิมเพื่อทำระบบ Undo
+        let backupBossTimes = null;
 
         // จัดการ UI แถบเลื่อนปรับความดังเสียง
         const volumeSlider = document.getElementById("cfgVolume");
@@ -660,7 +666,8 @@
 
                 if (nsStr === "-") { leftList.push({ fbKey: key, displayName, data, nsDt: null, pct }); continue; }
                 let parts = nsStr.split(" "); if (parts.length < 2) { leftList.push({ fbKey: key, displayName, data, nsDt: null, pct }); continue; }
-                let dParts = parts[0].split("/"); let tParts = parts[1].split(":");
+                let dParts = parts[0].split(" "); if(parts[0].includes("/")){ dParts = parts[0].split("/"); }
+                let tParts = parts[1].split(":");
                 let nsDt = new Date(dParts[2], dParts[1]-1, dParts[0], tParts[0], tParts[1]);
                 
                 if ((nsDt - now) / 60000 <= 5) { leftList.push({ fbKey: key, displayName, data, nsDt, pct }); } 
@@ -684,7 +691,6 @@
                 
                 let actionBtnHtml = "-";
                 if (currentUserRole === "admin" || currentUserRole === "editor") {
-                    // ใช้ CSS Variable (--btn-font-size และ --btn-padding) เพื่อปรับขนาดแบบไดนามิก
                     actionBtnHtml = `
                         <div class="flex justify-center gap-1.5 p-0.5" onclick="event.stopPropagation();">
                             <button onclick="quickKillBoss('${item.fbKey}')" 
@@ -792,10 +798,9 @@
             let data = bossData[fbKey]; if (!data) return;
             const pad = (n) => String(n).padStart(2, '0');
             
-            let baseDt = new Date(); // เผื่อกรณีไม่มีเวลาเดิม ให้ใช้เวลาปัจจุบันเซฟโซนไว้ก่อน
+            let baseDt = new Date();
             let nsStr = data.next_spawn || "-";
             
-            // ตรวจสอบว่ามีเวลาเกิดรอบถัดไปเดิมอยู่ไหม ถ้ามีให้เอาเวลานั้นมาคำนวณต่อเลย
             if (nsStr && nsStr !== "-") {
                 let parts = nsStr.split(" ");
                 if (parts.length >= 2) {
@@ -803,17 +808,15 @@
                     let tParts = parts[1].split(":");
                     let parsedDt = new Date(dParts[2], dParts[1]-1, dParts[0], tParts[0], tParts[1]);
                     if (!isNaN(parsedDt)) {
-                        baseDt = parsedDt; // ใช้เวลาเกิดเดิมเป็นฐานในการบวกรอบถัดไป
+                        baseDt = parsedDt;
                     }
                 }
             }
             
-            // คำนวณเวลาเกิดรอบถัดไปใหม่ โดยบวกเพิ่มจากฐานเวลาเกิดรอบที่แล้ว
             let nsDt = new Date(baseDt.getTime());
             nsDt.setHours(nsDt.getHours() + parseInt(data.respawn_hr || 12));
             nsDt.setMinutes(nsDt.getMinutes() + parseInt(data.respawn_min || 0));
             
-            // อัปเดตข้อมูลลง Firebase (last_kill จะกลายเป็นเวลาเกิดรอบที่เพิ่งข้ามไป ส่วน next_spawn จะเป็นรอบถัดไปจริงๆ)
             db.ref(fbKey).update({ 
                 last_kill: `${pad(baseDt.getDate())}/${pad(baseDt.getMonth()+1)}/${baseDt.getFullYear()} ${pad(baseDt.getHours())}:${pad(baseDt.getMinutes())}`, 
                 next_spawn: `${pad(nsDt.getDate())}/${pad(nsDt.getMonth()+1)}/${nsDt.getFullYear()} ${pad(nsDt.getHours())}:${pad(nsDt.getMinutes())}`, 
@@ -849,6 +852,65 @@
         }
         function deleteAllSpecialBosses() {
             for (let key in bossData) { if (bossData[key] && bossData[key].prefix) db.ref(key).remove(); }
+        }
+
+        // ฟังก์ชันระบบ: ลบเวลาบอสทั้งหมด
+        function clearAllBossTimes() {
+            if (confirm("⚠️ คุณแน่ใจใช่ไหมที่จะลบ 'เวลาตายล่าสุด' และ 'เวลาเกิดรอบถัดไป' ของบอสทุกตัวในระบบ? (ตัวบอสจะไม่หายไป จะรีเซ็ตเฉพาะเวลาให้กลับเป็นค่าเริ่มต้น)")) {
+                // ทำการ Backup ข้อมูลไว้ใน memory ก่อนประมวลผลลบ
+                backupBossTimes = JSON.parse(JSON.stringify(bossData));
+                
+                let promises = [];
+                for (let key in bossData) {
+                    if (bossData[key]) {
+                        let p = db.ref(key).update({
+                            last_kill: "-",
+                            next_spawn: "-",
+                            notified: false
+                        });
+                        promises.push(p);
+                    }
+                }
+                
+                if (promises.length > 0) {
+                    Promise.all(promises).then(() => {
+                        alert("🛑 รีเซ็ตลบเวลาบอสทั้งหมดเรียบร้อยแล้วครับ!");
+                        document.getElementById("btnUndoClearTime").classList.remove("hidden"); // แสดงปุ่มย้อนกลับ
+                        selectedBossKey = null;
+                        updateTable();
+                    });
+                } else {
+                    alert("ไม่พบข้อมูลบอสในระบบ");
+                }
+            }
+        }
+
+        // ฟังก์ชันระบบ: ย้อนกลับ (Undo) เพื่อคืนค่าเวลาที่ถูกลบไปล่าสุด
+        function undoClearBossTimes() {
+            if (!backupBossTimes) return alert("ไม่มีข้อมูลเวลาก่อนหน้าที่จะกู้คืน");
+            
+            if (confirm("↩️ คุณต้องการย้อนกลับและกู้คืน 'เวลาตายล่าสุด' และ 'เวลาเกิดรอบถัดไป' ของบอสทุกตัวใช่หรือไม่?")) {
+                let promises = [];
+                for (let key in backupBossTimes) {
+                    if (backupBossTimes[key]) {
+                        let p = db.ref(key).update({
+                            last_kill: backupBossTimes[key].last_kill || "-",
+                            next_spawn: backupBossTimes[key].next_spawn || "-",
+                            notified: backupBossTimes[key].notified || false
+                        });
+                        promises.push(p);
+                    }
+                }
+                
+                if (promises.length > 0) {
+                    Promise.all(promises).then(() => {
+                        alert("↩️ ย้อนกลับและกู้คืนเวลาบอสทั้งหมดเรียบร้อยแล้ว!");
+                        backupBossTimes = null; // คืนค่า Backup กลับเป็น Null
+                        document.getElementById("btnUndoClearTime").classList.add("hidden"); // ซ่อนปุ่มย้อนกลับกลับไป
+                        updateTable();
+                    });
+                }
+            }
         }
 
         function triggerChime(isTest = false) {
@@ -1044,7 +1106,6 @@
 
             function applyButtonSize(size) {
                 const fontSize = size + "px";
-                // คำนวณ padding ให้ขยายสัดส่วนตามขนาดตัวอักษรโดยอัตโนมัติ
                 const padTopBottom = Math.max(2, Math.floor(size * 0.35)) + "px";
                 const padLeftRight = Math.floor(size * 0.75) + "px";
                 const padding = `${padTopBottom} ${padLeftRight}`;
